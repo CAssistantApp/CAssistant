@@ -1,0 +1,36 @@
+name: CAssistant
+options:
+  bundleIdPrefix: com.cassistant
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+  
+settings:
+  SWIFT_VERSION: "5.9"
+  SWIFT_ACTIVE_COMPILATION_CONDITIONS: SWIFTUI_ENABLE_LIQUID_GLASS
+  
+targets:
+  CAssistant:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - CAssistant
+    settings:
+      base:
+        INFOPLIST_FILE: CAssistant/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.cassistant.app
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SWIFT_EMIT_LOC_STRINGS: YES
+    info:
+      path: CAssistant/Info.plist
+    entitlements:
+      path: CAssistant/CAssistant.entitlements
+    resources:
+      - CAssistant/Resources
