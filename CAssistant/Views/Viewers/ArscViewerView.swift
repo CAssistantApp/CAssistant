@@ -314,8 +314,8 @@ struct ArscViewerView: View {
 
         // 检查 ARSC 文件头 (ARSC 文件以 0x02 0x00 0x0C 0x00 开头)
         if bytes.count >= 4 {
-            let headerType = readUInt16(bytes: bytes, offset: 0)
-            let headerSize = readUInt16(bytes: bytes, offset: 2)
+            let _ = readUInt16(bytes: bytes, offset: 0)
+            let _ = readUInt16(bytes: bytes, offset: 2)
 
             // headerType 应为 RES_TABLE_TYPE (0x0002)
             // 标准 ARSC 以 0x0200 开头

@@ -32,6 +32,7 @@ struct SettingsView: View {
                 AboutView()
             }
         }
+        }
     }
 
     // MARK: - 主题设置
@@ -208,6 +209,7 @@ struct SettingsView: View {
 
     // MARK: - 关于
     private var aboutSection: some View {
+        Group {
         return Section {
             GlassCard {
                 VStack(spacing: 4) {

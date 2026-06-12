@@ -329,7 +329,7 @@ struct DexViewerView: View {
                 let magicBytes = [UInt8](magicData)
                 if magicBytes.count >= 8 {
                     let magicHex = magicBytes.prefix(4).map { String(format: "%02X", $0) }.joined(separator: " ")
-                    let versionStr = magicBytes[4..<8].map { String(format: "%02X", $0) }.joined()
+                    let _ = magicBytes[4..<8].map { String(format: "%02X", $0) }.joined()
 
                     headerInfo.magic = "dex\n035" == String(bytes: magicBytes.prefix(4), encoding: .ascii) ?? "" ? "DEX\n035" : magicHex
                     headerInfo.version = "035"  // Standard DEX version

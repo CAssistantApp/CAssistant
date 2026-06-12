@@ -196,7 +196,7 @@ struct FileListView: View {
                 let parentPath = currentPath
                 currentPath = currentPath.isEmpty ? component : "\(currentPath)/\(component)"
 
-                if let existing = pathMap[currentPath] {
+                if pathMap[currentPath] != nil {
                     continue
                 }
 

@@ -22,7 +22,7 @@ final class APKParserService {
         progress(0.1, "创建临时目录: \(extractDir.lastPathComponent)")
 
         let entries = try parseZipEntries(data: data)
-        let totalEntries = Float(entries.count)
+        let _ = Float(entries.count)
         progress(0.15, "发现 \(entries.count) 个条目")
 
         for (idx, entry) in entries.enumerated() {
@@ -47,10 +47,9 @@ final class APKParserService {
         let fm = FileManager.default
         let basePath = extractDir.path
 
-        if let enumerator = fm.enumerator(at: extractDir, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
+        if let allFiles = fm.enumerator(at: extractDir, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey])?.allObjects as? [URL] {
             var files: [FileEntry] = []
-            var rootChildren: [FileEntry] = []
-            for case let fileURL as URL in enumerator {
+            for fileURL in allFiles {
                 let relPath = String(fileURL.path.dropFirst(basePath.count + 1))
                 let vals = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
                 let entry = FileEntry(
@@ -78,8 +77,8 @@ final class APKParserService {
         progress(0.8, "解析权限: \(result.permissions.count) 项")
 
         // 解析证书
-        if let certPath = fm.enumerator(at: extractDir.appendingPathComponent("META-INF"), includingPropertiesForKeys: nil) {
-            for case let certURL as URL in certPath {
+        if let allMetaFiles = fm.enumerator(at: extractDir.appendingPathComponent("META-INF"), includingPropertiesForKeys: nil)?.allObjects as? [URL] {
+            for certURL in allMetaFiles {
                 let name = certURL.lastPathComponent.uppercased()
                 if name.hasSuffix(".RSA") || name.hasSuffix(".DSA") || name.hasSuffix(".EC") {
                     if let certData = try? Data(contentsOf: certURL) {
@@ -96,8 +95,8 @@ final class APKParserService {
         progress(0.85, "解析组件: \(result.components.count) 个")
 
         // 收集 DEX 文件
-        if let enumerator = fm.enumerator(at: extractDir, includingPropertiesForKeys: nil) {
-            for case let fileURL as URL in enumerator {
+        if let allDexFiles = fm.enumerator(at: extractDir, includingPropertiesForKeys: nil)?.allObjects as? [URL] {
+            for fileURL in allDexFiles {
                 if fileURL.pathExtension == "dex" {
                     result.dexFiles.append(fileURL.path)
                 }
@@ -106,34 +105,20 @@ final class APKParserService {
         result.apkInfo.dexCount = result.dexFiles.count
         progress(0.88, "DEX 文件: \(result.dexFiles.count) 个")
 
-        // 收集 Smali 文件
-        if let enumerator = fm.enumerator(at: extractDir, includingPropertiesForKeys: nil) {
-            for case let fileURL as URL in enumerator {
-                if fileURL.pathExtension == "smali" {
-                    result.smaliFiles.append(fileURL.path)
+        // 收集所有文件（一次性遍历）
+        if let allURLs = fm.enumerator(at: extractDir, includingPropertiesForKeys: nil)?.allObjects as? [URL] {
+            for fileURL in allURLs {
+                let ext = fileURL.pathExtension.lowercased()
+                switch ext {
+                case "smali": result.smaliFiles.append(fileURL.path)
+                case "so": result.soFiles.append(fileURL.path)
+                case "arsc": result.arscFiles.append(fileURL.path)
+                default: break
                 }
             }
         }
         progress(0.92, "Smali 文件: \(result.smaliFiles.count) 个")
-
-        // 收集 SO 文件
-        if let enumerator = fm.enumerator(at: extractDir, includingPropertiesForKeys: nil) {
-            for case let fileURL as URL in enumerator {
-                if fileURL.pathExtension == "so" {
-                    result.soFiles.append(fileURL.path)
-                }
-            }
-        }
         progress(0.95, "SO 库: \(result.soFiles.count) 个")
-
-        // 收集 ARSC 文件
-        if let enumerator = fm.enumerator(at: extractDir, includingPropertiesForKeys: nil) {
-            for case let fileURL as URL in enumerator {
-                if fileURL.pathExtension == "arsc" {
-                    result.arscFiles.append(fileURL.path)
-                }
-            }
-        }
         progress(0.98, "ARSC 文件: \(result.arscFiles.count) 个")
 
         // 解析 APK 基本信息

@@ -481,7 +481,7 @@ struct SoAnalysisView: View {
         let osAbi = bytes[7]
         elfHeader.osAbi = osAbiLookup(osAbi)
 
-        let is64Bit = eiClass == 2
+        let _ = eiClass == 2
 
         // 解析 e_type (offset depends on 32/64 bit)
         // 32-bit: e_type at offset 16 (2 bytes), 64-bit: e_type at offset 16 (2 bytes)

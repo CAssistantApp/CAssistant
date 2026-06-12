@@ -76,12 +76,11 @@ struct FilePreviewView: View {
 
     // MARK: - Recursive File Tree Node
     @ViewBuilder
-    private func fileTreeNode(entry: FileEntry, level: Int) -> AnyView {
-        AnyView(
+    private func fileTreeNode(entry: FileEntry, level: Int) -> some View {
         if entry.isDirectory {
             DisclosureGroup {
                 ForEach(entry.children) { child in
-                    fileTreeNode(entry: child, level: level + 1)
+                    AnyView(fileTreeNode(entry: child, level: level + 1))
                 }
             } label: {
                 HStack(spacing: 6) {
@@ -144,7 +143,6 @@ struct FilePreviewView: View {
             }
             .buttonStyle(.plain)
         }
-        )
     }
 
     // MARK: - Right: Preview Panel
