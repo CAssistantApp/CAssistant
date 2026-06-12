@@ -60,7 +60,8 @@ jobs:
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGN_ENTITLEMENTS="" \
-              DEVELOPMENT_TEAM="" | xcpretty && exit ${PIPESTATUS[0]}
+              DEVELOPMENT_TEAM="" \
+              OTHER_SWIFT_FLAGS="\$(inherited) -swift-version 5" | xcpretty && exit ${PIPESTATUS[0]}
           else
             echo "▶ 开发者签名构建"
             xcodebuild build \

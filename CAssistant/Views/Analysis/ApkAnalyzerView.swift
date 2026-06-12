@@ -77,7 +77,7 @@ struct ApkAnalyzerView: View {
                         GlassCard {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {
-                                    if #available(iOS 17.0, *) {
+                                    if #available(iOS 18.0, *) {
                                         Image(systemName: "arrow.triangle.2.circlepath")
                                             .font(.title3)
                                             .foregroundStyle(.tint)
@@ -86,6 +86,8 @@ struct ApkAnalyzerView: View {
                                         Image(systemName: "arrow.triangle.2.circlepath")
                                             .font(.title3)
                                             .foregroundStyle(.tint)
+                                            .rotationEffect(.degrees(appState.isAnalyzing ? 360 : 0))
+                                            .animation(appState.isAnalyzing ? .linear(duration: 2).repeatForever(autoreverses: false) : .default, value: appState.isAnalyzing)
                                     }
                                     Text("正在分析...")
                                         .font(.subheadline)
