@@ -93,7 +93,8 @@ struct FileListView: View {
     }
 
     // MARK: - Directory Section
-    private func directorySection(_ entry: FileEntry) -> some View {
+    private func directorySection(_ entry: FileEntry) -> AnyView {
+        AnyView(
         Section {
             if expandedPaths.contains(entry.path) {
                 ForEach(entry.children) { child in
@@ -143,6 +144,7 @@ struct FileListView: View {
             }
             .buttonStyle(.plain)
         }
+        )
     }
 
     // MARK: - File Row

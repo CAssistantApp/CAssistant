@@ -122,7 +122,7 @@ struct TerminalView: View {
             Button(action: executeCommand) {
                 Image(systemName: "arrow.forward.circle.fill")
                     .font(.system(size: 22))
-                    .foregroundColor(commandInput.trimmingCharacters(in: .whitespaces).isEmpty ? .tertiary : .green)
+                    .foregroundStyle(commandInput.trimmingCharacters(in: .whitespaces).isEmpty ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.green))
             }
             .buttonStyle(.plain)
             .disabled(commandInput.trimmingCharacters(in: .whitespaces).isEmpty)

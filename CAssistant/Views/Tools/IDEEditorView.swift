@@ -286,7 +286,7 @@ struct IDEEditorView: View {
                 let occurrences = findOccurrencesCount()
                 Text(occurrences > 0 ? "找到 \(occurrences) 处匹配" : "未找到匹配")
                     .font(.system(size: 11))
-                    .foregroundStyle(occurrences > 0 ? .secondary : .red)
+                    .foregroundColor(occurrences > 0 ? .secondary : .red)
                     .padding(.horizontal, 4)
             }
         }

@@ -130,17 +130,17 @@ struct ManifestView: View {
     @ViewBuilder
     private func highlightedXMLText(_ line: String) -> some View {
         let trimmed = line.trimmingCharacters(in: .whitespaces)
-        Text(AttributedString(buildHighlightedXML(line: trimmed)))
+        let highlighted = buildHighlightedXML(line: trimmed)
+        Text(highlighted)
             .font(.system(size: 13, design: .monospaced))
             .textSelection(.enabled)
     }
 
     private func buildHighlightedXML(line: String) -> AttributedString {
         var attrString = AttributedString(line)
-        attrString.foregroundColor = .primary
+        attrString.foregroundColor = Color.primary
 
-        // 高亮 XML 标签
-        let tagPatterns = [
+        let pairs: [(String, Color)] = [
             ("<[^>]*>", Color.purple),
             ("\"[^\"]*\"", Color.orange),
             ("android:name", Color.cyan),
@@ -159,7 +159,7 @@ struct ManifestView: View {
             ("<intent-filter", Color.teal),
         ]
 
-        for (pattern, color) in tagPatterns {
+        for (pattern, color) in pairs {
             if let range = line.range(of: pattern, options: [.regularExpression, .caseInsensitive]) {
                 let nsRange = NSRange(range, in: line)
                 if let attrRange = Range(nsRange, in: attrString) {

@@ -208,7 +208,7 @@ struct SettingsView: View {
 
     // MARK: - 关于
     private var aboutSection: some View {
-        Section {
+        return Section {
             GlassCard {
                 VStack(spacing: 4) {
                     GlassNavRow(

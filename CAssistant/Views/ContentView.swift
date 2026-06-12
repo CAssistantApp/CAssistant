@@ -68,7 +68,7 @@ struct ContentView: View {
     }
 
     private var sidebarList: some View {
-        List(selection: $selectedTab) {
+        List {
             GlassNavRow(title: "分析", icon: "ant.circle.fill", subtitle: "解析 APK 文件") { selectedTab = .analyze }
             GlassNavRow(title: "查看器", icon: "eye.circle.fill", subtitle: "查看详细信息") { selectedTab = .viewer }
             GlassNavRow(title: "AI 助手", icon: "bolt.circle.fill", subtitle: "智能分析") { selectedTab = .ai }

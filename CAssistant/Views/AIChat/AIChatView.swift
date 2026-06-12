@@ -198,7 +198,7 @@ struct AIChatView: View {
             Button(action: sendMessage) {
                 Image(systemName: "paperplane.circle.fill")
                     .font(.system(size: 28))
-                    .foregroundColor(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .tertiary : .blue)
+                    .foregroundStyle(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.blue))
             }
             .buttonStyle(.plain)
             .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

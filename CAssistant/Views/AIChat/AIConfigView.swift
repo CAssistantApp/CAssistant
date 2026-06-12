@@ -197,7 +197,7 @@ struct AIConfigView: View {
         }) {
             HStack {
                 Image(systemName: localConfig.model == model ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(localConfig.model == model ? .blue : .tertiary)
+                    .foregroundStyle(localConfig.model == model ? AnyShapeStyle(.blue) : AnyShapeStyle(.tertiary))
                 Text(model)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.primary)
