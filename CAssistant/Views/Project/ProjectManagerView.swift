@@ -292,9 +292,7 @@ struct ProjectManagerView: View {
             }
 
             if let children = node.children {
-                Group {
-                    fileTreeView(nodes: children, level: level + 1)
-                }
+                AnyView(fileTreeView(nodes: children, level: level + 1))
             }
         }
     }

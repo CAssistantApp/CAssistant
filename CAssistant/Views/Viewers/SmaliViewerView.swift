@@ -18,8 +18,15 @@ private struct SmaliFileNode: Identifiable {
     let id = UUID()
     let name: String
     let isDirectory: Bool
-    let children: [SmaliFileNode]? = nil
-    let content: String? = nil
+    let children: [SmaliFileNode]?
+    let content: String?
+    
+    init(name: String, isDirectory: Bool, children: [SmaliFileNode]? = nil, content: String? = nil) {
+        self.name = name
+        self.isDirectory = isDirectory
+        self.children = children
+        self.content = content
+    }
 }
 
 // MARK: - 代码统计
@@ -289,10 +296,8 @@ struct SmaliViewerView: View {
             .buttonStyle(.plain)
 
             if let children = node.children {
-                Group {
-                    ForEach(children) { child in
-                        fileTreeNodeView(node: child, level: level + 1)
-                    }
+                ForEach(children) { child in
+                    AnyView(fileTreeNodeView(node: child, level: level + 1))
                 }
             }
         }
