@@ -168,7 +168,7 @@ struct FileImportManager {
         .json,
         .executable,
         .binaryPropertyList,
-        .dylib,
+        UTType(filenameExtension: "dylib") ?? .data,
         .shellScript,
         UTType(filenameExtension: "apk") ?? .data,
         UTType(filenameExtension: "ipa") ?? .data,

@@ -172,13 +172,15 @@ struct ContentView: View {
 }
 
 // MARK: - 导航分类
-enum NavigationCategory: String, CaseIterable {
+enum NavigationCategory: String, CaseIterable, Identifiable {
     case analysis = "analysis"
     case viewers = "viewers"
     case ai = "ai"
     case project = "project"
     case tools = "tools"
     case settings = "settings"
+    
+    var id: String { rawValue }
     
     var title: String {
         switch self {

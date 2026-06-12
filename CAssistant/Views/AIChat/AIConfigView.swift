@@ -103,7 +103,7 @@ struct AIConfigView: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(selectedProvider == provider ?
                                         LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing) :
-                                        LinearGradient(colors: [Color(.regularMaterial)], startPoint: .top, endPoint: .bottom))
+                                        LinearGradient(colors: [Color(.systemGray6)], startPoint: .top, endPoint: .bottom))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)

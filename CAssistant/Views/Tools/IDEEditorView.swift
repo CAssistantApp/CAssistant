@@ -432,8 +432,9 @@ struct IDEEditorView: View {
         let lines = codeContent.components(separatedBy: "\n")
         var line = lines[result.line - 1]
         line.replaceSubrange(result.range, with: replaceText)
-        lines[result.line - 1] = line
-        codeContent = lines.joined(separator: "\n")
+        var mutableLines = lines
+        mutableLines[result.line - 1] = line
+        codeContent = mutableLines.joined(separator: "\n")
         performSearch()
     }
     
@@ -519,7 +520,7 @@ struct IDEEditorView: View {
             
             // 数字高亮
             var numSearch = attributed.startIndex..<attributed.endIndex
-            while let numRange = attributed[numSearch].range(of: #"\b\d+(\.\d+)?\b"#, strategy: .regularExpression) {
+            while let numRange = attributed[numSearch].range(of: #"\b\d+(\.\d+)?\b"#, options: .regularExpression) {
                 attributed[numRange].foregroundColor = .blue
                 numSearch = numRange.upperBound..<attributed.endIndex
             }

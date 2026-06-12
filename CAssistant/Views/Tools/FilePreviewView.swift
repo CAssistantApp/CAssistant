@@ -431,7 +431,7 @@ private struct FileTreeNodeView: View {
                     
                     Image(systemName: node.icon)
                         .font(.caption)
-                        .foregroundStyle(node.isDirectory ? .accentColor : .secondary)
+                        .foregroundStyle(node.isDirectory ? Color.accentColor : .secondary)
                         .frame(width: 16)
                     
                     Text(node.name)
