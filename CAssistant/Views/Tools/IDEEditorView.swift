@@ -1,700 +1,623 @@
 import SwiftUI
 
-// MARK: - IDE编辑器视图
+// MARK: - IDE Editor View
 struct IDEEditorView: View {
-    @EnvironmentObject private var appState: AppState
-    
-    @State private var codeContent: String = ""
-    @State private var fileName: String = "untitled.swift"
-    @State private var showFileTree: Bool = true
-    @State private var showSearchPanel: Bool = false
-    
-    // 搜索替换
-    @State private var searchText: String = ""
-    @State private var replaceText: String = ""
-    @State private var searchResults: [SearchResult] = []
-    @State private var currentSearchIndex: Int = -1
-    @State private var searchCaseSensitive: Bool = false
-    
-    // 文件树
-    @State private var editorFiles: [EditorFile] = EditorFile.samples
-    @State private var selectedFileId: UUID?
-    
-    // 行号
-    @State private var lineCount: Int = 0
-    
-    // 语法高亮
-    @State private var highlightedLines: [Int: AttributedString] = [:]
-    
-    // 文件操作
-    @State private var showNewFileAlert = false
-    @State private var newFileName: String = ""
-    @State private var showFileImporter = false
-    @State private var showSaveAlert = false
-    @State private var saveMessage = ""
-    
+    @EnvironmentObject var appState: AppState
+    @State private var codeContent = ""
+    @State private var currentFile = ""
+    @State private var showLineNumbers = true
+    @State private var showFindReplace = false
+    @State private var showHighlightedPreview = false
+    @State private var findText = ""
+    @State private var replaceText = ""
+    @State private var cursorLine: Int = 1
+    @State private var cursorColumn: Int = 1
+
+    // MARK: - Computed Properties
+    private var detectedLanguage: String {
+        let ext = (currentFile as NSString).pathExtension.lowercased()
+        switch ext {
+        case "smali": return "smali"
+        case "java": return "java"
+        case "xml": return "xml"
+        case "json": return "json"
+        case "txt": return "txt"
+        default: return "smali"
+        }
+    }
+
+    private var languageLabel: String {
+        switch detectedLanguage {
+        case "smali": return "Smali"
+        case "java": return "Java"
+        case "xml": return "XML"
+        case "json": return "JSON"
+        case "txt": return "Text"
+        default: return "Smali"
+        }
+    }
+
+    private var languageColor: Color {
+        switch detectedLanguage {
+        case "smali": return .purple
+        case "java": return .orange
+        case "xml": return .blue
+        case "json": return .yellow
+        case "txt": return .secondary
+        default: return .purple
+        }
+    }
+
+    private var totalLines: Int {
+        codeContent.components(separatedBy: "\n").count
+    }
+
+    private var fileSizeString: String {
+        let data = codeContent.data(using: .utf8)
+        let size = data?.count ?? 0
+        if size < 1024 { return "\(size) B" }
+        if size < 1024 * 1024 { return String(format: "%.1f KB", Double(size) / 1024) }
+        return String(format: "%.1f MB", Double(size) / (1024 * 1024))
+    }
+
+    private var fileEncoding: String {
+        "UTF-8"
+    }
+
+    // MARK: - Body
     var body: some View {
-        GlassSplitView {
-            // 左侧：文件树
-            if showFileTree {
-                fileTreePanel
-            }
-            
-            // 右侧：编辑器主体
-            VStack(spacing: 0) {
-                // 工具栏
-                toolbarArea
-                
-                // 搜索替换面板
-                if showSearchPanel {
-                    searchReplacePanel
-                }
-                
-                // 编辑器区域
-                editorArea
-                
-                // 底部状态栏
-                statusBar
-            }
-        }
-        .navigationTitle("IDE编辑器")
-        .background(Color.clear)
-        .onChange(of: codeContent) { _ in
-            updateLineCount(codeContent)
-            updateSyntaxHighlight(codeContent)
-        }
-        .alert("新建文件", isPresented: $showNewFileAlert) {
-            TextField("文件名", text: $newFileName)
-            Button("取消", role: .cancel) { }
-            Button("创建") {
-                createNewFile()
-            }
-        } message: {
-            Text("请输入新文件名（含扩展名）")
-        }
-        .alert("保存文件", isPresented: $showSaveAlert) {
-            Button("确定", role: .cancel) { }
-        } message: {
-            Text(saveMessage)
-        }
-        .fileImporter(
-            isPresented: $showFileImporter,
-            allowedContentTypes: [.plainText, .swiftSource, .sourceCode, .xml, .json, .yaml, .script],
-            allowsMultipleSelection: false
-        ) { result in
-            openFile(result)
-        }
-        .onAppear {
-            if let first = editorFiles.first {
-                selectFile(first)
-            }
-        }
-    }
-    
-    // MARK: - 文件树面板
-    private var fileTreePanel: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("文件")
-                    .font(.headline)
-                Spacer()
-                Button(action: { showFileTree = false }) {
-                    Image(systemName: "sidebar.left")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 1) {
-                    ForEach(editorFiles) { file in
-                        EditorFileRow(
-                            file: file,
-                            isSelected: selectedFileId == file.id,
-                            onSelect: { selectFile(file) }
-                        )
+            toolbarView
+
+            if showHighlightedPreview {
+                syntaxHighlightedPreview
+            } else {
+                GlassCodeEditor(text: $codeContent, language: detectedLanguage)
+                    .onChange(of: codeContent) { _ in
+                        updateCursorPosition()
                     }
-                }
-                .padding(4)
+            }
+
+            statusBarView
+
+            if showFindReplace {
+                findReplacePanel
             }
         }
-        .frame(minWidth: 200, idealWidth: 240, maxWidth: 280)
-        .background(.ultraThinMaterial)
     }
-    
-    // MARK: - 工具栏
-    private var toolbarArea: some View {
+
+    // MARK: - Toolbar
+    private var toolbarView: some View {
         HStack(spacing: 8) {
-            // 文件操作
-            Group {
-                Button(action: { showNewFileAlert = true }) {
-                    Label("新建", systemImage: "doc.badge.plus")
-                        .font(.caption)
-                }
-                .glassButtonStyle()
-                
-                Button(action: { showFileImporter = true }) {
-                    Label("打开", systemImage: "folder")
-                        .font(.caption)
-                }
-                .glassButtonStyle()
-                
-                Button(action: saveFile) {
-                    Label("保存", systemImage: "square.and.arrow.down")
-                        .font(.caption)
-                }
-                .glassButtonStyle()
+            GlassButton(title: "打开", icon: "folder", color: .accentColor) {
+                openFile()
             }
-            
-            Divider()
-                .frame(height: 20)
-            
-            // 显示切换
-            if !showFileTree {
-                Button(action: { showFileTree = true }) {
-                    Image(systemName: "sidebar.left")
+
+            GlassButton(title: "保存", icon: "square.and.arrow.down", color: .green) {
+                saveFile()
+            }
+
+            GlassButton(
+                title: showFindReplace ? "关闭查找" : "查找替换",
+                icon: "magnifyingglass",
+                color: showFindReplace ? .orange : .accentColor
+            ) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showFindReplace.toggle()
                 }
-                .glassButtonStyle()
             }
-            
-            Button(action: { showSearchPanel.toggle() }) {
-                Label("搜索", systemImage: "magnifyingglass")
-                    .font(.caption)
-            }
-            .glassButtonStyle()
-            
+
             Spacer()
-            
-            // 文件名
-            Text(fileName)
-                .font(.system(.subheadline, design: .monospaced))
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(.thinMaterial)
-    }
-    
-    // MARK: - 搜索替换面板
-    private var searchReplacePanel: some View {
-        VStack(spacing: 8) {
-            HStack {
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField("搜索...", text: $searchText)
-                        .textFieldStyle(.plain)
-                        .font(.subheadline)
-                        .onChange(of: searchText) { _ in
-                            performSearch()
-                        }
-                }
-                .padding(6)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(.ultraThinMaterial)
-                )
-                
-                if !searchResults.isEmpty {
-                    Text("\(currentSearchIndex + 1)/\(searchResults.count)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    
-                    Button(action: previousSearchResult) {
-                        Image(systemName: "chevron.up")
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Button(action: nextSearchResult) {
-                        Image(systemName: "chevron.down")
-                    }
-                    .buttonStyle(.plain)
-                }
-                
-                Button(action: { showSearchPanel = false }) {
-                    Image(systemName: "xmark")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
+
+            GlassBadge(text: languageLabel, color: languageColor)
+
+            Button {
+                showHighlightedPreview.toggle()
+            } label: {
+                Image(systemName: showHighlightedPreview ? "pencil" : "eye")
+                    .font(.system(size: 14, weight: .medium))
             }
-            
-            if !searchText.isEmpty {
-                HStack {
-                    HStack {
-                        TextField("替换为...", text: $replaceText)
-                            .textFieldStyle(.plain)
-                            .font(.subheadline)
-                    }
-                    .padding(6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(.ultraThinMaterial)
-                    )
-                    
-                    GlassButton(title: "替换", icon: "arrow.right") {
-                        replaceCurrent()
-                    }
-                    
-                    GlassButton(title: "全部替换", icon: "arrow.right.2") {
-                        replaceAll()
-                    }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.ultraThinMaterial)
+            )
+            .foregroundColor(.accentColor)
+
+            Button {
+                showLineNumbers.toggle()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: showLineNumbers ? "list.number" : "list.bullet")
+                        .font(.system(size: 12))
+                    Text("行号")
+                        .font(.system(size: 12))
                 }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(showLineNumbers ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.thinMaterial))
+            )
+            .foregroundColor(showLineNumbers ? .accentColor : .secondary)
+
+            if !currentFile.isEmpty {
+                Text(currentFile.components(separatedBy: "/").last ?? currentFile)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
+        .background(
+            Rectangle()
+                .fill(.ultraThinMaterial)
+        )
     }
-    
-    // MARK: - 编辑器区域
-    private var editorArea: some View {
+
+    // MARK: - Syntax Highlighted Preview
+    private var syntaxHighlightedPreview: some View {
         ScrollView([.horizontal, .vertical]) {
             HStack(alignment: .top, spacing: 0) {
-                // 行号
-                VStack(alignment: .trailing, spacing: 0) {
-                    ForEach(1..<lineCount + 1, id: \.self) { lineNum in
-                        Text("\(lineNum)")
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.tertiary)
-                            .frame(height: 20)
-                            .padding(.trailing, 8)
+                if showLineNumbers {
+                    VStack(alignment: .trailing, spacing: 0) {
+                        ForEach(1...totalLines, id: \.self) { i in
+                            Text("\(i)")
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(.tertiary)
+                                .frame(minWidth: 32, alignment: .trailing)
+                                .padding(.trailing, 8)
+                                .padding(.vertical, 1)
+                        }
                     }
+                    .padding(.vertical, 12)
+                    .background(.ultraThinMaterial)
                 }
-                .padding(.vertical, 8)
-                .padding(.leading, 8)
-                .background(
-                    Rectangle()
-                        .fill(.ultraThinMaterial)
-                        .frame(width: 50)
-                )
-                
-                // 代码内容
-                TextEditor(text: $codeContent)
-                    .font(.system(.body, design: .monospaced))
-                    .scrollContentBackground(.hidden)
-                    .background(.clear)
-                    .frame(minWidth: 600, minHeight: 400)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 8)
+
+                Text(highlightedAttributedString(for: codeContent, language: detectedLanguage))
+                    .font(.system(size: 13, design: .monospaced))
+                    .textSelection(.enabled)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(.regularMaterial)
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.ultraThinMaterial)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(.white.opacity(0.1), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(.white.opacity(0.08), lineWidth: 0.5)
         )
-        .padding(8)
     }
-    
-    // MARK: - 底部状态栏
-    private var statusBar: some View {
+
+    // MARK: - Status Bar
+    private var statusBarView: some View {
         HStack(spacing: 16) {
-            Label("\(lineCount) 行", systemImage: "text.alignleft")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            
-            Label("UTF-8", systemImage: "textformat")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            
-            if showSearchPanel {
-                Label("\(searchResults.count) 个匹配", systemImage: "number")
-                    .font(.caption)
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.up.and.down.text.horizontal")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                Text("行 \(cursorLine)")
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
-            
+
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.left.and.right.text.vertical")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                Text("列 \(cursorColumn)")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 4) {
+                Image(systemName: "textformat")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                Text(fileEncoding)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+
             Spacer()
-            
-            Label("\(codeContent.count) 字符", systemImage: "character")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 4)
-        .background(.thinMaterial)
-    }
-    
-    // MARK: - 方法
-    
-    private func selectFile(_ file: EditorFile) {
-        selectedFileId = file.id
-        fileName = file.name
-        codeContent = file.content
-        updateLineCount(codeContent)
-        updateSyntaxHighlight(codeContent)
-        searchResults = []
-        currentSearchIndex = -1
-    }
-    
-    private func createNewFile() {
-        guard !newFileName.isEmpty else { return }
-        let newFile = EditorFile(name: newFileName, content: "", icon: fileIcon(for: newFileName))
-        editorFiles.append(newFile)
-        selectFile(newFile)
-        newFileName = ""
-    }
-    
-    private func openFile(_ result: Result<[URL], Error>) {
-        switch result {
-        case .success(let urls):
-            guard let url = urls.first else { return }
-            guard url.startAccessingSecurityScopedResource() else { return }
-            defer { url.stopAccessingSecurityScopedResource() }
-            
-            do {
-                let content = try String(contentsOf: url, encoding: .utf8)
-                let name = url.lastPathComponent
-                let newFile = EditorFile(name: name, content: content, icon: fileIcon(for: name))
-                editorFiles.append(newFile)
-                selectFile(newFile)
-            } catch {
-                saveMessage = "无法打开文件: \(error.localizedDescription)"
-                showSaveAlert = true
-            }
-        case .failure(let error):
-            saveMessage = "文件选择失败: \(error.localizedDescription)"
-            showSaveAlert = true
-        }
-    }
-    
-    private func saveFile() {
-        saveMessage = "文件「\(fileName)」已保存"
-        showSaveAlert = true
-    }
-    
-    private func updateLineCount(_ content: String) {
-        lineCount = max(content.components(separatedBy: "\n").count, 1)
-    }
-    
-    private func fileIcon(for name: String) -> String {
-        let ext = name.components(separatedBy: ".").last?.lowercased() ?? ""
-        switch ext {
-        case "swift": return "swift"
-        case "kt", "kts": return "kotlin"
-        case "java": return "java"
-        case "py": return "python"
-        case "js", "ts": return "javascript"
-        case "xml": return "doc.xml"
-        case "json": return "curlybraces"
-        case "yaml", "yml": return "yaml"
-        case "md": return "doc.text"
-        case "txt": return "doc.text"
-        default: return "doc"
-        }
-    }
-    
-    // MARK: - 搜索替换
-    private func performSearch() {
-        guard !searchText.isEmpty else {
-            searchResults = []
-            currentSearchIndex = -1
-            return
-        }
-        
-        let options: String.CompareOptions = searchCaseSensitive ? [] : .caseInsensitive
-        var results: [SearchResult] = []
-        let lines = codeContent.components(separatedBy: "\n")
-        
-        for (lineIdx, line) in lines.enumerated() {
-            var searchRange = line.startIndex..<line.endIndex
-            while let range = line.range(of: searchText, options: options, range: searchRange) {
-                let col = line.distance(from: line.startIndex, to: range.lowerBound)
-                results.append(SearchResult(line: lineIdx + 1, column: col, range: range))
-                searchRange = range.upperBound..<line.endIndex
-            }
-        }
-        
-        searchResults = results
-        currentSearchIndex = results.isEmpty ? -1 : 0
-    }
-    
-    private func nextSearchResult() {
-        if !searchResults.isEmpty {
-            currentSearchIndex = (currentSearchIndex + 1) % searchResults.count
-        }
-    }
-    
-    private func previousSearchResult() {
-        if !searchResults.isEmpty {
-            currentSearchIndex = (currentSearchIndex - 1 + searchResults.count) % searchResults.count
-        }
-    }
-    
-    private func replaceCurrent() {
-        guard currentSearchIndex >= 0 && currentSearchIndex < searchResults.count else { return }
-        let result = searchResults[currentSearchIndex]
-        let lines = codeContent.components(separatedBy: "\n")
-        var line = lines[result.line - 1]
-        line.replaceSubrange(result.range, with: replaceText)
-        var mutableLines = lines
-        mutableLines[result.line - 1] = line
-        codeContent = mutableLines.joined(separator: "\n")
-        performSearch()
-    }
-    
-    private func replaceAll() {
-        guard !searchText.isEmpty else { return }
-        let options: String.CompareOptions = searchCaseSensitive ? [] : .caseInsensitive
-        codeContent = codeContent.replacingOccurrences(of: searchText, with: replaceText, options: options)
-        performSearch()
-    }
-    
-    // MARK: - 简单语法高亮
-    private func updateSyntaxHighlight(_ content: String) {
-        let lines = content.components(separatedBy: "\n")
-        highlightedLines = [:]
-        
-        let keywords = [
-            "import", "struct", "class", "enum", "protocol", "extension",
-            "func", "var", "let", "if", "else", "for", "while", "switch",
-            "case", "return", "break", "continue", "guard", "defer",
-            "throws", "rethrows", "async", "await", "actor", "mutating",
-            "nonmutating", "override", "static", "private", "public",
-            "internal", "fileprivate", "open", "final", "lazy", "weak",
-            "unowned", "inout", "indirect", "required", "optional",
-            "true", "false", "nil", "self", "super", "Type", "Protocol",
-            "where", "associatedtype", "subscript", "init", "deinit"
-        ]
-        
-        let typePatterns = [
-            "Int", "String", "Double", "Float", "Bool", "Array",
-            "Dictionary", "Set", "Data", "Date", "URL", "UUID",
-            "Error", "Result", "Optional", "Any", "AnyObject",
-            "CodingKey", "Codable", "Encodable", "Decodable",
-            "View", "Shape", "Color", "Image", "Text"
-        ]
-        
-        for (index, line) in lines.enumerated() {
-            var attributed = AttributedString(line)
-            
-            // 关键字高亮
-            for kw in keywords {
-                var searchRange = attributed.startIndex..<attributed.endIndex
-                while let range = attributed[searchRange].range(of: kw) {
-                    if attributed[range].characters.allSatisfy({ $0.isLetter }) {
-                        attributed[range].foregroundColor = .purple
-                        attributed[range].font = .system(.body, design: .monospaced).bold()
-                    }
-                    searchRange = range.upperBound..<attributed.endIndex
-                }
-            }
-            
-            // 类型高亮
-            for tp in typePatterns {
-                var searchRange = attributed.startIndex..<attributed.endIndex
-                while let range = attributed[searchRange].range(of: tp) {
-                    attributed[range].foregroundColor = .teal
-                    searchRange = range.upperBound..<attributed.endIndex
-                }
-            }
-            
-            // 注释高亮（//）
-            if let commentRange = attributed.range(of: "//") {
-                attributed[commentRange.lowerBound...].foregroundColor = .green
-            }
-            
-            // 字符串高亮
-            var strSearch = attributed.startIndex..<attributed.endIndex
-            while let quoteStart = attributed[strSearch].range(of: "\"") {
-                let afterQuote = quoteStart.upperBound
-                if afterQuote < attributed.endIndex {
-                    let remaining = afterQuote..<attributed.endIndex
-                    if let quoteEnd = attributed[remaining].range(of: "\"") {
-                        let fullRange = quoteStart.lowerBound..<quoteEnd.upperBound
-                        attributed[fullRange].foregroundColor = .orange
-                        strSearch = quoteEnd.upperBound..<attributed.endIndex
-                    } else {
-                        attributed[quoteStart.lowerBound...].foregroundColor = .orange
-                        break
-                    }
-                } else {
-                    break
-                }
-            }
-            
-            // 数字高亮
-            var numSearch = attributed.startIndex..<attributed.endIndex
-            while let numRange = attributed[numSearch].range(of: #"\b\d+(\.\d+)?\b"#, options: .regularExpression) {
-                attributed[numRange].foregroundColor = .blue
-                numSearch = numRange.upperBound..<attributed.endIndex
-            }
-            
-            highlightedLines[index + 1] = attributed
-        }
-    }
-}
 
-// MARK: - 编辑器文件模型
-struct EditorFile: Identifiable {
-    let id = UUID()
-    let name: String
-    let content: String
-    let icon: String
-    
-    static let samples: [EditorFile] = [
-        EditorFile(name: "MainActivity.swift", content: """
-import SwiftUI
-
-struct MainActivity: View {
-    @EnvironmentObject private var appState: AppState
-    @State private var isLoading = false
-    @State private var showDetail = false
-    
-    let title: String
-    let items: [String]
-    
-    var body: some View {
-        NavigationStack {
-            List(items, id: \\.self) { item in
-                HStack(spacing: 12) {
-                    Image(systemName: "doc.text")
-                        .foregroundStyle(.tint)
-                    Text(item)
-                        .font(.body)
-                }
-                .padding(.vertical, 4)
+            HStack(spacing: 4) {
+                Image(systemName: "doc")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                Text(fileSizeString)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.secondary)
             }
-            .navigationTitle(title)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { isLoading.toggle() }) {
-                        Label("刷新", systemImage: "arrow.clockwise")
-                    }
-                }
+
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.left.forwardslash.chevron.right")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                Text("\(totalLines) 行")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.secondary)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+        .background(
+            Rectangle()
+                .fill(.ultraThinMaterial)
+        )
     }
-    
-    // 数据加载方法
-    func loadData() async throws -> [String] {
-        let url = URL(string: "https://api.example.com/data")!
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let decoded = try JSONDecoder().decode([String].self, from: data)
-        return decoded
-    }
-}
-""", icon: "swift"),
-        EditorFile(name: "NetworkService.swift", content: """
-import Foundation
 
-// MARK: - 网络服务
-final class NetworkService {
-    static let shared = NetworkService()
-    private let session: URLSession
-    private let decoder = JSONDecoder()
-    
-    private init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 60
-        self.session = URLSession(configuration: config)
-    }
-    
-    // 通用请求方法
-    func request<T: Decodable>(
-        _ endpoint: Endpoint,
-        type: T.Type
-    ) async throws -> T {
-        var request = URLRequest(url: endpoint.url)
-        request.httpMethod = endpoint.method
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        if let body = endpoint.body {
-            request.httpBody = try JSONEncoder().encode(body)
-        }
-        
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.httpError(httpResponse.statusCode)
-        }
-        
-        return try decoder.decode(T.self, from: data)
-    }
-}
-
-enum NetworkError: LocalizedError {
-    case invalidResponse
-    case httpError(Int)
-    case decodingFailed
-}
-""", icon: "swift"),
-        EditorFile(name: "config.json", content: """
-{
-    "app": {
-        "name": "CAssistant",
-        "version": "1.0.0",
-        "build": 20260612
-    },
-    "analysis": {
-        "maxFileSize": 104857600,
-        "enableDeepScan": true,
-        "supportedFormats": [
-            "apk", "ipa", "dex", "so",
-            "smali", "xml", "arsc"
-        ]
-    },
-    "ai": {
-        "provider": "openai",
-        "model": "gpt-4",
-        "temperature": 0.3,
-        "maxTokens": 4096
-    },
-    "ui": {
-        "theme": "dark",
-        "fontSize": 14,
-        "showLineNumbers": true
-    }
-}
-""", icon: "curlybraces")
-    ]
-}
-
-// MARK: - 搜索替换结果模型
-private struct SearchResult {
-    let line: Int
-    let column: Int
-    let range: Range<String.Index>
-}
-
-// MARK: - 文件行组件
-private struct EditorFileRow: View {
-    let file: EditorFile
-    let isSelected: Bool
-    let onSelect: () -> Void
-    
-    var body: some View {
-        Button(action: onSelect) {
+    // MARK: - Find / Replace Panel
+    private var findReplacePanel: some View {
+        VStack(spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: file.icon)
-                    .font(.caption)
-                    .foregroundColor(isSelected ? .accentColor : .secondary)
-                Text(file.name)
-                    .font(.subheadline)
-                    .lineLimit(1)
-                Spacer()
+                GlassSearchBar(text: $findText, placeholder: "查找...")
+                    .frame(maxWidth: .infinity)
+
+                TextField("替换为...", text: $replaceText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 14))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(.thinMaterial)
+                    )
+                    .frame(maxWidth: .infinity)
+
+                GlassButton(title: "替换", icon: "arrow.triangle.swap", color: .orange) {
+                    performReplace()
+                }
+
+                GlassButton(title: "全部", icon: "text.line.first.and.arrowtriangle.forward", color: .orange) {
+                    performReplaceAll()
+                }
             }
-            .padding(.vertical, 6)
-            .padding(.horizontal, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(.thinMaterial).opacity(isSelected ? 1 : 0)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? Color.accentColor.opacity(0.3) : .clear, lineWidth: 0.5)
-            )
+
+            if !findText.isEmpty {
+                let occurrences = findOccurrencesCount()
+                Text(occurrences > 0 ? "找到 \(occurrences) 处匹配" : "未找到匹配")
+                    .font(.system(size: 11))
+                    .foregroundStyle(occurrences > 0 ? .secondary : .red)
+                    .padding(.horizontal, 4)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(12)
+        .background(
+            Rectangle()
+                .fill(.thinMaterial)
+        )
+    }
+
+    // MARK: - Syntax Highlighting
+    private func highlightedAttributedString(for text: String, language: String) -> AttributedString {
+        switch language {
+        case "smali": return highlightSmali(text)
+        case "xml": return highlightXML(text)
+        case "json": return highlightJSON(text)
+        case "java": return highlightJava(text)
+        default: return AttributedString(text)
+        }
+    }
+
+    // MARK: - Smali Syntax Highlighting
+    private func highlightSmali(_ text: String) -> AttributedString {
+        let lines = text.components(separatedBy: "\n")
+        var result = AttributedString()
+
+        for (index, line) in lines.enumerated() {
+            if index > 0 {
+                result.append(AttributedString("\n"))
+            }
+
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            let leadingSpaces = line.prefix(line.count - line.drop(while: { $0 == " " || $0 == "\t" }).count)
+            var lineAttr = AttributedString(String(leadingSpaces))
+            lineAttr.foregroundColor = .primary
+            result.append(lineAttr)
+
+            if trimmedLine.hasPrefix("#") {
+                var comment = AttributedString(trimmedLine)
+                comment.foregroundColor = .green
+                result.append(comment)
+            } else if trimmedLine.hasPrefix(".class") {
+                var classToken = AttributedString(trimmedLine)
+                classToken.foregroundColor = .purple
+                result.append(classToken)
+            } else if trimmedLine.hasPrefix(".super") {
+                var superToken = AttributedString(trimmedLine)
+                superToken.foregroundColor = .purple
+                result.append(superToken)
+            } else if trimmedLine.hasPrefix(".field") {
+                var fieldToken = AttributedString(trimmedLine)
+                fieldToken.foregroundColor = .cyan
+                result.append(fieldToken)
+            } else if trimmedLine.hasPrefix(".method") {
+                var methodToken = AttributedString(trimmedLine)
+                methodToken.foregroundColor = .blue
+                result.append(methodToken)
+            } else if trimmedLine.hasPrefix(".end method") || trimmedLine.hasPrefix(".end field") {
+                var endToken = AttributedString(trimmedLine)
+                endToken.foregroundColor = .gray
+                result.append(endToken)
+            } else if trimmedLine.hasPrefix("invoke-") {
+                var invokeToken = AttributedString(trimmedLine)
+                invokeToken.foregroundColor = .orange
+                result.append(invokeToken)
+            } else if trimmedLine.hasPrefix("const") || trimmedLine.hasPrefix("const-") {
+                var constToken = AttributedString(trimmedLine)
+                constToken.foregroundColor = .yellow
+                result.append(constToken)
+            } else if trimmedLine.hasPrefix("move") || trimmedLine.hasPrefix("move-") {
+                var moveToken = AttributedString(trimmedLine)
+                moveToken.foregroundColor = .mint
+                result.append(moveToken)
+            } else if trimmedLine.hasPrefix("if-") || trimmedLine.hasPrefix("goto") || trimmedLine.hasPrefix("return") {
+                var flowToken = AttributedString(trimmedLine)
+                flowToken.foregroundColor = .pink
+                result.append(flowToken)
+            } else if trimmedLine.hasPrefix("new-") || trimmedLine.hasPrefix("iget") || trimmedLine.hasPrefix("iput") ||
+                      trimmedLine.hasPrefix("sget") || trimmedLine.hasPrefix("sput") {
+                var token = AttributedString(trimmedLine)
+                token.foregroundColor = .teal
+                result.append(token)
+            } else if trimmedLine.hasPrefix(".line") || trimmedLine.hasPrefix(".local") ||
+                      trimmedLine.hasPrefix(".param") || trimmedLine.hasPrefix(".prologue") ||
+                      trimmedLine.hasPrefix(".annotation") || trimmedLine.hasPrefix(".end annotation") ||
+                      trimmedLine.hasPrefix(".registers") || trimmedLine.hasPrefix(".locals") {
+                var metaToken = AttributedString(trimmedLine)
+                metaToken.foregroundColor = .gray
+                result.append(metaToken)
+            } else {
+                var defaultText = AttributedString(trimmedLine)
+                defaultText.foregroundColor = .primary
+                result.append(defaultText)
+            }
+        }
+
+        return result
+    }
+
+    // MARK: - XML Syntax Highlighting
+    private func highlightXML(_ text: String) -> AttributedString {
+        var result = AttributedString()
+
+        // Simple regex-based highlighting for XML
+        let pattern = "(<\\/?[\\w:.\\-]+)|([\\w:.\\-]+=\"[^\"]*\")|(>[^<]+<)|(<!--[\\s\\S]*?-->)"
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return AttributedString(text)
+        }
+
+        let nsString = text as NSString
+        let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
+
+        var lastEnd = 0
+        for match in matches {
+            // Append text before this match
+            if match.range.location > lastEnd {
+                let beforeRange = NSRange(location: lastEnd, length: match.range.location - lastEnd)
+                var beforeStr = AttributedString(nsString.substring(with: beforeRange))
+                beforeStr.foregroundColor = .primary
+                result.append(beforeStr)
+            }
+
+            let matchText = nsString.substring(with: match.range)
+
+            if match.range(at: 1).location != NSNotFound {
+                // Tag: <tag> or </tag>
+                var tagAttr = AttributedString(matchText)
+                tagAttr.foregroundColor = .purple
+                result.append(tagAttr)
+            } else if match.range(at: 2).location != NSNotFound {
+                // Attribute: attr="value"
+                var attrText = AttributedString(matchText)
+                attrText.foregroundColor = .cyan
+                result.append(attrText)
+            } else if match.range(at: 3).location != NSNotFound {
+                // Text content
+                let content = String(matchText.dropFirst().dropLast())
+                var contentAttr = AttributedString(content)
+                contentAttr.foregroundColor = .orange
+                result.append(contentAttr)
+            } else if match.range(at: 4).location != NSNotFound {
+                // Comment
+                var commentAttr = AttributedString(matchText)
+                commentAttr.foregroundColor = .green
+                result.append(commentAttr)
+            }
+
+            lastEnd = match.range.location + match.range.length
+        }
+
+        // Append remaining text
+        if lastEnd < nsString.length {
+            let remainingRange = NSRange(location: lastEnd, length: nsString.length - lastEnd)
+            var remaining = AttributedString(nsString.substring(with: remainingRange))
+            remaining.foregroundColor = .primary
+            result.append(remaining)
+        }
+
+        return result
+    }
+
+    // MARK: - JSON Syntax Highlighting
+    private func highlightJSON(_ text: String) -> AttributedString {
+        var result = AttributedString()
+
+        let pattern = "(\"[^\"]*\"\\s*:)|(\"[^\"]*\")|(\\b-?\\d+\\.?\\d*\\b)|(true|false|null)"
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return AttributedString(text)
+        }
+
+        let nsString = text as NSString
+        let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
+
+        var lastEnd = 0
+        for match in matches {
+            if match.range.location > lastEnd {
+                let beforeRange = NSRange(location: lastEnd, length: match.range.location - lastEnd)
+                var beforeStr = AttributedString(nsString.substring(with: beforeRange))
+                beforeStr.foregroundColor = .primary
+                result.append(beforeStr)
+            }
+
+            let matchText = nsString.substring(with: match.range)
+
+            if match.range(at: 1).location != NSNotFound {
+                // Key: "key":
+                var keyAttr = AttributedString(matchText)
+                keyAttr.foregroundColor = .blue
+                result.append(keyAttr)
+            } else if match.range(at: 2).location != NSNotFound {
+                // String value
+                var strAttr = AttributedString(matchText)
+                strAttr.foregroundColor = .green
+                result.append(strAttr)
+            } else if match.range(at: 3).location != NSNotFound {
+                // Number
+                var numAttr = AttributedString(matchText)
+                numAttr.foregroundColor = .orange
+                result.append(numAttr)
+            } else if match.range(at: 4).location != NSNotFound {
+                // Boolean/null
+                var boolAttr = AttributedString(matchText)
+                boolAttr.foregroundColor = .pink
+                result.append(boolAttr)
+            }
+
+            lastEnd = match.range.location + match.range.length
+        }
+
+        if lastEnd < nsString.length {
+            let remainingRange = NSRange(location: lastEnd, length: nsString.length - lastEnd)
+            var remaining = AttributedString(nsString.substring(with: remainingRange))
+            remaining.foregroundColor = .primary
+            result.append(remaining)
+        }
+
+        return result
+    }
+
+    // MARK: - Java Syntax Highlighting
+    private func highlightJava(_ text: String) -> AttributedString {
+        var result = AttributedString()
+
+        let keywords = ["public", "private", "protected", "static", "final", "class", "interface",
+                        "extends", "implements", "void", "int", "long", "float", "double", "boolean",
+                        "char", "byte", "short", "return", "if", "else", "for", "while", "do",
+                        "switch", "case", "break", "continue", "new", "try", "catch", "finally",
+                        "throw", "throws", "import", "package", "this", "super", "null", "true", "false"]
+
+        let keywordPattern = "\\b(" + keywords.joined(separator: "|") + ")\\b"
+        let pattern = "(//[^\n]*)|(\\/\\*[\\s\\S]*?\\*\\/)|(\"[^\"]*\")|" + keywordPattern
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return AttributedString(text)
+        }
+
+        let nsString = text as NSString
+        let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
+
+        var lastEnd = 0
+        for match in matches {
+            if match.range.location > lastEnd {
+                let beforeRange = NSRange(location: lastEnd, length: match.range.location - lastEnd)
+                var beforeStr = AttributedString(nsString.substring(with: beforeRange))
+                beforeStr.foregroundColor = .primary
+                result.append(beforeStr)
+            }
+
+            let matchText = nsString.substring(with: match.range)
+
+            if match.range(at: 1).location != NSNotFound || match.range(at: 2).location != NSNotFound {
+                // Comments
+                var commentAttr = AttributedString(matchText)
+                commentAttr.foregroundColor = .green
+                result.append(commentAttr)
+            } else if match.range(at: 3).location != NSNotFound {
+                // Strings
+                var strAttr = AttributedString(matchText)
+                strAttr.foregroundColor = .orange
+                result.append(strAttr)
+            } else if match.range(at: 4).location != NSNotFound {
+                // Keywords
+                var kwAttr = AttributedString(matchText)
+                kwAttr.foregroundColor = .purple
+                result.append(kwAttr)
+            }
+
+            lastEnd = match.range.location + match.range.length
+        }
+
+        if lastEnd < nsString.length {
+            let remainingRange = NSRange(location: lastEnd, length: nsString.length - lastEnd)
+            var remaining = AttributedString(nsString.substring(with: remainingRange))
+            remaining.foregroundColor = .primary
+            result.append(remaining)
+        }
+
+        return result
+    }
+
+    // MARK: - Actions
+    private func openFile() {
+        // Open file from appState smaliFiles
+        if let firstFile = appState.smaliFiles.first {
+            currentFile = firstFile
+            if let content = try? String(contentsOfFile: firstFile, encoding: .utf8) {
+                codeContent = content
+            }
+        }
+    }
+
+    private func saveFile() {
+        guard !currentFile.isEmpty, !codeContent.isEmpty else { return }
+        try? codeContent.write(toFile: currentFile, atomically: true, encoding: .utf8)
+    }
+
+    private func updateCursorPosition() {
+        let lines = codeContent.components(separatedBy: "\n")
+        cursorLine = max(1, lines.count)
+        cursorColumn = max(1, (lines.last?.count ?? 0) + 1)
+    }
+
+    private func performReplace() {
+        guard !findText.isEmpty else { return }
+        codeContent = codeContent.replacingOccurrences(of: findText, with: replaceText)
+    }
+
+    private func performReplaceAll() {
+        guard !findText.isEmpty else { return }
+        codeContent = codeContent.replacingOccurrences(of: findText, with: replaceText)
+    }
+
+    private func findOccurrencesCount() -> Int {
+        guard !findText.isEmpty else { return 0 }
+        var count = 0
+        var searchRange = codeContent.startIndex..<codeContent.endIndex
+        while let range = codeContent.range(of: findText, options: .caseInsensitive, range: searchRange) {
+            count += 1
+            searchRange = range.upperBound..<codeContent.endIndex
+        }
+        return count
+    }
+}
+
+// MARK: - Preview
+struct IDEEditorView_Previews: PreviewProvider {
+    static var previews: some View {
+        IDEEditorView()
+            .environmentObject(AppState())
+            .preferredColorScheme(.dark)
     }
 }

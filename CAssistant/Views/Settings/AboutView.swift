@@ -1,152 +1,192 @@
 import SwiftUI
 
-// MARK: - 关于页面
 struct AboutView: View {
-    @EnvironmentObject private var appState: AppState
-    
-    private let appVersion = "1.0.0"
-    private let buildNumber = "20260612"
-    
+    @Environment(\.dismiss) var dismiss
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // 应用图标与名称
-                GlassCard {
-                    VStack(spacing: 16) {
-                        if #available(iOS 17.0, *) {
-                            Image(systemName: "ant.circle.fill")
-                                .font(.system(size: 80))
-                                .foregroundStyle(.tint)
-                                .symbolEffect(.pulse, options: .repeating)
-                        } else {
-                            Image(systemName: "ant.circle.fill")
-                                .font(.system(size: 80))
-                                .foregroundStyle(.tint)
-                        }
-                        
-                        Text("CAssistant")
-                            .font(.largeTitle.bold())
-                        
-                        Text("APK逆向工程辅助工具")
-                            .font(.title3)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // 应用图标和名称
+                    appHeader
+
+                    // 基本信息
+                    basicInfoSection
+
+                    // 功能亮点
+                    featureHighlightsSection
+
+                    // 技术栈
+                    techStackSection
+
+                    // 致谢
+                    acknowledgementsSection
                 }
-                
-                // 版本信息
-                GlassCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        GlassSectionHeader(title: "版本信息", systemImage: "info.circle")
-                        
-                        GlassInfoRow(label: "应用版本", value: appVersion, icon: "number")
-                        GlassInfoRow(label: "构建号", value: buildNumber, icon: "hammer")
-                        GlassInfoRow(label: "平台", value: "iOS / iPadOS", icon: "iphone")
-                        GlassInfoRow(label: "最低支持", value: "iOS 16.0", icon: "arrow.up")
-                    }
-                }
-                
-                // 功能介绍
-                GlassCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        GlassSectionHeader(title: "功能介绍", systemImage: "sparkles")
-                        
-                        FeatureRow(icon: "doc.text.magnifyingglass", title: "APK深度解析", description: "全面解析APK结构、Manifest、DEX、资源文件等")
-                        FeatureRow(icon: "hand.raised", title: "权限安全分析", description: "检测敏感权限与安全风险")
-                        FeatureRow(icon: "square.stack.3d.up", title: "类结构分析", description: "查看类、方法、字段的完整结构")
-                        FeatureRow(icon: "chevron.left.forwardslash.chevron.right", title: "Smali/Dex查看", description: "浏览Dalvik字节码与类定义")
-                        FeatureRow(icon: "cpu", title: "SO库分析", description: "分析Native库的ELF结构与导出函数")
-                        FeatureRow(icon: "lock.shield", title: "签名证书管理", description: "APK签名验证与证书管理")
-                        FeatureRow(icon: "pencil.and.outline", title: "IDE代码编辑器", description: "内置代码编辑器与智能辅助")
-                        FeatureRow(icon: "brain", title: "AI智能分析", description: "AI驱动的代码解释、优化与检测")
-                    }
-                }
-                
-                // 技术栈
-                GlassCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        GlassSectionHeader(title: "技术栈", systemImage: "gear")
-                        
-                        GlassInfoRow(label: "界面框架", value: "SwiftUI", icon: "swift")
-                        GlassInfoRow(label: "解析引擎", value: "内置APK解析器", icon: "doc.text")
-                        GlassInfoRow(label: "AI集成", value: "OpenAI / Claude API", icon: "network")
-                        GlassInfoRow(label: "签名工具", value: "APKSigner 引擎", icon: "lock")
-                        GlassInfoRow(label: "数据模型", value: "Swift Codable", icon: "cylinder.split.1x2")
-                    }
-                }
-                
-                // 许可信息
-                GlassCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        GlassSectionHeader(title: "许可信息", systemImage: "doc.text")
-                        
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("MIT License")
-                                .font(.headline)
-                            
-                            Text("""
-                                Copyright (c) 2026 CAssistant Team
-                                
-                                特此授权，任何获得本软件副本及相关文档文件（以下简称"软件"）的人均可无限制地免费使用本软件，包括但不限于使用、复制、修改、合并、发布、分发、再许可和/或出售软件副本的权利，并允许接受软件的人这样做，但须符合以下条件：
-                                
-                                上述版权声明和本许可声明应包含在软件的所有副本或重要部分中。
-                                
-                                本软件按"原样"提供，不附带任何明示或暗示的担保，包括但不限于适销性、特定用途适用性和非侵权性的担保。在任何情况下，作者或版权持有人均不对因软件或软件的使用或其他处理而引起的或与之相关的任何索赔、损害或其他责任负责。
-                                """)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineSpacing(4)
-                        }
-                        .padding(.horizontal, 4)
-                    }
-                }
-                
-                // 底部版权
-                Text("© 2026 CAssistant Team. All rights reserved.")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(.bottom, 20)
+                .padding()
             }
-            .padding()
+            .background(.ultraThinMaterial)
+            .navigationTitle("关于")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    GlassButton(title: "关闭", icon: "xmark", color: .secondary) {
+                        dismiss()
+                    }
+                }
+            }
         }
-        .navigationTitle("关于")
-        .background(Color.clear)
+    }
+
+    // MARK: - 应用图标和名称
+    private var appHeader: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "ant.circle.fill")
+                .font(.system(size: 72))
+                .foregroundColor(.accentColor)
+                .padding(.top, 20)
+
+            Text("CAssistant")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+
+            Text("版本 3.0")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - 基本信息
+    private var basicInfoSection: some View {
+        GlassCard {
+            VStack(spacing: 0) {
+                GlassSectionHeader(title: "基本信息", icon: "info.circle.fill")
+
+                GlassInfoRow(label: "版本", value: "3.0", icon: "number")
+                Divider().background(.white.opacity(0.08))
+                GlassInfoRow(label: "构建号", value: "2026.06", icon: "hammer.fill")
+                Divider().background(.white.opacity(0.08))
+                GlassInfoRow(label: "平台", value: "iOS 16+", icon: "iphone")
+                Divider().background(.white.opacity(0.08))
+                GlassInfoRow(label: "开发者", value: "CAssistant Team", icon: "person.2.fill")
+                Divider().background(.white.opacity(0.08))
+                GlassInfoRow(label: "Bundle ID", value: "com.cassistant.app", icon: "barcode")
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    // MARK: - 功能亮点
+    private var featureHighlightsSection: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                GlassSectionHeader(title: "功能亮点", icon: "star.circle.fill")
+
+                VStack(alignment: .leading, spacing: 6) {
+                    featureRow(icon: "ant.circle.fill", title: "APK 深度分析", description: "全面的 APK 文件解析，包括 Manifest、权限、证书、组件等")
+                    featureRow(icon: "magnifyingglass.circle.fill", title: "权限审计", description: "自动识别危险权限，按风险等级分类")
+                    featureRow(icon: "signature", title: "签名验证", description: "检查 APK 签名证书的有效性和完整性")
+                    featureRow(icon: "curlybraces", title: "Smali 编辑", description: "支持 Smali 代码浏览、编辑和语法高亮")
+                    featureRow(icon: "square.stack.3d.up", title: "SO 库分析", description: "分析 Native 库的架构、符号和依赖关系")
+                    featureRow(icon: "bolt.circle.fill", title: "AI 智能助手", description: "集成多平台 AI 模型，辅助代码分析和安全审计")
+                    featureRow(icon: "terminal.fill", title: "内置终端", description: "命令行工具，支持文件浏览和信息查询")
+                    featureRow(icon: "arrow.triangle.2.circlepath", title: "逆向工具集", description: "字符串搜索、交叉引用、资源提取等实用功能")
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    private func featureRow(icon: String, title: String, description: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundColor(.accentColor)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+                Text(description)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - 技术栈
+    private var techStackSection: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                GlassSectionHeader(title: "技术栈", icon: "gearshape.2.fill")
+
+                VStack(spacing: 0) {
+                    GlassInfoRow(label: "UI 框架", value: "SwiftUI", icon: "swift")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "最低系统", value: "iOS 16.0", icon: "iphone")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "语言", value: "Swift 5.9+", icon: "textformat")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "架构", value: "MVVM + EnvironmentObject", icon: "square.3.layers.3d.down.left")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "设计", value: "Glassmorphism 风格", icon: "circle.lefthalf.filled")
+                }
+                .padding(.vertical, 4)
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    // MARK: - 致谢
+    private var acknowledgementsSection: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                GlassSectionHeader(title: "致谢", icon: "heart.circle.fill")
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("感谢以下开源项目和工具：")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16)
+
+                    acknowledgementItem("Apktool - APK 逆向工程工具")
+                    acknowledgementItem("dex2jar - DEX 到 JAR 转换工具")
+                    acknowledgementItem("smali/baksmali - DEX 汇编/反汇编")
+                    acknowledgementItem("aapt/aapt2 - Android 资源打包工具")
+                    acknowledgementItem("IDA Pro / Ghidra - 原生代码分析")
+                    acknowledgementItem("SwiftUI - Apple 声明式 UI 框架")
+                }
+                .padding(.bottom, 8)
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    private func acknowledgementItem(_ text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "circle.fill")
+                .font(.system(size: 5))
+                .foregroundStyle(.tertiary)
+            Text(text)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 2)
     }
 }
 
-// MARK: - 功能行组件
-private struct FeatureRow: View {
-    let icon: String
-    let title: String
-    let description: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(.tint)
-                .frame(width: 28)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.body)
-                    .fontWeight(.medium)
-                Text(description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            
-            Spacer()
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(.white.opacity(0.1), lineWidth: 0.5)
-        )
+// MARK: - Preview
+struct AboutView_Previews: PreviewProvider {
+    static var previews: some View {
+        AboutView()
+            .environmentObject(AppState())
+            .preferredColorScheme(.dark)
     }
 }

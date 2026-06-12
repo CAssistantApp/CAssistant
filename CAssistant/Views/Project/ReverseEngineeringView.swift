@@ -1,425 +1,212 @@
 import SwiftUI
 
-// MARK: - 反编译方式枚举
-enum DecompileMethod: String, CaseIterable {
-    case apktool = "Apktool"
-    case jadx    = "JADX"
-    case both    = "两者"
+struct ReverseEngineeringView: View {
+    @EnvironmentObject var appState: AppState
+    @State private var searchText: String = ""
+    @State private var searchResults: [FileEntry] = []
+    @State private var isSearching: Bool = false
+    @State private var showSearchResults: Bool = false
 
-    var description: String {
-        switch self {
-        case .apktool: return "Smali/资源反编译"
-        case .jadx:    return "Java源代码反编译"
-        case .both:    return "同时使用两种方式"
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                // 工具列表
+                toolListSection
+
+                // 字符串搜索
+                searchSection
+
+                // 搜索结果
+                if showSearchResults && !searchResults.isEmpty {
+                    searchResultsSection
+                }
+            }
+            .padding()
         }
+        .background(.ultraThinMaterial)
+        .navigationTitle("逆向工程")
+    }
+
+    // MARK: - 工具列表
+    private var toolListSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            GlassSectionHeader(title: "逆向工具", icon: "arrow.triangle.2.circlepath")
+
+            GlassCard {
+                VStack(spacing: 4) {
+                    GlassNavRow(
+                        title: "DEX 转 Jar",
+                        icon: "arrow.triangle.swap",
+                        subtitle: "使用 dex2jar 将 DEX 转为 JAR 文件"
+                    ) {
+                        // Navigate
+                    }
+
+                    GlassNavRow(
+                        title: "Smali 编辑",
+                        icon: "chevron.left.forwardslash.chevron.right",
+                        subtitle: "查看和编辑 Smali 代码"
+                    ) {
+                        // Navigate
+                    }
+
+                    GlassNavRow(
+                        title: "SO 库分析",
+                        icon: "square.stack.3d.up",
+                        subtitle: "分析 Native 库的符号和依赖"
+                    ) {
+                        // Navigate
+                    }
+
+                    GlassNavRow(
+                        title: "字符串搜索",
+                        icon: "magnifyingglass.circle.fill",
+                        subtitle: "在所有文件中搜索字符串"
+                    ) {
+                        withAnimation {
+                            showSearchResults = true
+                        }
+                    }
+
+                    GlassNavRow(
+                        title: "方法交叉引用",
+                        icon: "arrow.triangle.branch",
+                        subtitle: "查找方法的调用者和被调用者"
+                    ) {
+                        // Navigate
+                    }
+
+                    GlassNavRow(
+                        title: "资源提取",
+                        icon: "photo.on.rectangle.angled",
+                        subtitle: "提取 APK 中的图片和资源文件"
+                    ) {
+                        // Navigate
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    // MARK: - 搜索区域
+    private var searchSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            GlassSectionHeader(title: "字符串搜索", icon: "magnifyingglass.circle.fill")
+
+            HStack(spacing: 8) {
+                GlassSearchBar(text: $searchText, placeholder: "搜索 Smali/XML/TXT 文件内容...")
+
+                GlassButton(title: "搜索", icon: "magnifyingglass", color: .accentColor) {
+                    performSearch()
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
+    // MARK: - 搜索结果
+    private var searchResultsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            GlassSectionHeader(title: "搜索结果 (\(searchResults.count))", icon: "list.bullet")
+
+            GlassCard {
+                VStack(spacing: 2) {
+                    ForEach(searchResults) { file in
+                        resultRow(file)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    private func resultRow(_ file: FileEntry) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: fileIcon(for: file.name))
+                .font(.caption)
+                .foregroundColor(.accentColor)
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(file.name)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                Text(file.path)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Text(formatFileSize(file.size))
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    // MARK: - 搜索逻辑
+    private func performSearch() {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            searchResults = []
+            return
+        }
+
+        isSearching = true
+        defer { isSearching = false }
+
+        searchResults = appState.files.filter { file in
+            guard !file.isDirectory else { return false }
+            let name = file.name.lowercased()
+            let isMatchable = name.hasSuffix(".smali")
+                || name.hasSuffix(".xml")
+                || name.hasSuffix(".txt")
+                || name.hasSuffix(".java")
+                || name.hasSuffix(".kt")
+                || name.hasSuffix(".properties")
+                || name.hasSuffix(".json")
+
+            guard isMatchable else { return false }
+
+            // 在文件名和路径中搜索
+            let fileNameMatch = name.contains(query.lowercased())
+            let pathMatch = file.path.lowercased().contains(query.lowercased())
+
+            return fileNameMatch || pathMatch
+        }
+
+        showSearchResults = true
+    }
+
+    // MARK: - 辅助方法
+    private func fileIcon(for name: String) -> String {
+        let lower = name.lowercased()
+        if lower.hasSuffix(".smali") { return "chevron.left.forwardslash.chevron.right" }
+        if lower.hasSuffix(".xml") { return "chevron.left.slash.chevron.right" }
+        if lower.hasSuffix(".txt") { return "doc.text" }
+        if lower.hasSuffix(".java") || lower.hasSuffix(".kt") { return "curlybraces" }
+        if lower.hasSuffix(".json") { return "curlybraces" }
+        if lower.hasSuffix(".properties") { return "gearshape" }
+        return "doc"
+    }
+
+    private func formatFileSize(_ size: Int64) -> String {
+        if size < 1024 { return "\(size) B" }
+        if size < 1024 * 1024 { return String(format: "%.1f KB", Double(size) / 1024.0) }
+        return String(format: "%.1f MB", Double(size) / (1024.0 * 1024.0))
     }
 }
 
-// MARK: - ReverseEngineeringView
-struct ReverseEngineeringView: View {
-    @EnvironmentObject private var appState: AppState
-
-    // APK文件
-    @State private var apkFilePath: String = ""
-    @State private var showApkPicker = false
-
-    // 输出目录
-    @State private var outputDir: String = NSHomeDirectory() + "/Documents/Decompiled"
-    @State private var showOutputPicker = false
-
-    // 反编译方式
-    @State private var decompileMethod: DecompileMethod = .apktool
-
-    // 详细选项 - Apktool
-    @State private var decodeSmali = true
-    @State private var decodeResources = true
-    @State private var decodeManifest = true
-    @State private var noRes = false
-    @State private var forceDecode = false
-
-    // 详细选项 - JADX
-    @State private var showJavaCode = true
-    @State private var decompileInline = false
-    @State private var showLineNumbers = true
-    @State private var escapeUnicode = false
-    @State private var showInconsistentCode = false
-
-    // 分析选项
-    @State private var analyzePermissions = true
-    @State private var analyzeComponents = true
-    @State private var analyzeClasses = false
-    @State private var analyzeStrings = false
-    @State private var analyzeAPI = true
-    @State private var analyzeSecurity = true
-
-    // 状态
-    @State private var isRunning = false
-    @State private var progress: Double = 0
-    @State private var currentStep: String = ""
-    @State private var showResult = false
-    @State private var resultMessage = ""
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // 标题栏
-            HStack {
-                Text("逆向工程")
-                    .font(.title2.bold())
-                    .foregroundColor(.white)
-
-                Spacer()
-
-                if isRunning {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .tint(.blue)
-                        Text(currentStep)
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
-                }
-            }
-            .padding()
-            .glassCard()
-
-            ScrollView {
-                VStack(spacing: 20) {
-                    // 文件选择
-                    fileSelectionSection
-
-                    // 反编译方式
-                    methodSelectionSection
-
-                    // 详细选项
-                    detailOptionsSection
-
-                    // 分析选项
-                    analysisOptionsSection
-
-                    // 进度与操作
-                    actionSection
-                }
-                .padding()
-            }
-        }
-        .glassBackground()
-        .alert("逆向结果", isPresented: $showResult) {
-            Button("确定", role: .cancel) { }
-        } message: {
-            Text(resultMessage)
-        }
-    }
-
-    // MARK: - 文件选择
-    private var fileSelectionSection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                GlassSectionHeader(title: "文件选择")
-
-                // APK文件选择
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("APK文件")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
-                    HStack {
-                        Image(systemName: "doc.fill")
-                            .foregroundColor(.orange)
-                        Text(apkFilePath.isEmpty ? "请选择APK文件" : apkFilePath)
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundColor(apkFilePath.isEmpty ? .white.opacity(0.4) : .white)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Spacer()
-                        GlassButton(title: "选择", icon: "folder") {
-                            showApkPicker = true
-                        }
-                    }
-                    .padding(10)
-                    .background(.white.opacity(0.06))
-                    .cornerRadius(8)
-                }
-
-                // 输出目录
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("输出目录")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
-                    HStack {
-                        Image(systemName: "folder.fill")
-                            .foregroundColor(.cyan)
-                        Text(outputDir)
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Spacer()
-                        GlassButton(title: "浏览", icon: "folder.badge.plus") {
-                            showOutputPicker = true
-                        }
-                    }
-                    .padding(10)
-                    .background(.white.opacity(0.06))
-                    .cornerRadius(8)
-                }
-            }
-            .padding()
-        }
-    }
-
-    // MARK: - 反编译方式
-    private var methodSelectionSection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                GlassSectionHeader(title: "反编译方式")
-
-                HStack(spacing: 12) {
-                    ForEach(DecompileMethod.allCases, id: \.self) { method in
-                        Button {
-                            decompileMethod = method
-                        } label: {
-                            VStack(spacing: 6) {
-                                Image(systemName: iconForMethod(method))
-                                    .font(.title2)
-                                Text(method.rawValue)
-                                    .font(.caption.bold())
-                                Text(method.description)
-                                    .font(.caption2)
-                                    .foregroundColor(.white.opacity(0.5))
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(decompileMethod == method ? Color.blue.opacity(0.25) : .white.opacity(0.05))
-                            .cornerRadius(10)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(decompileMethod == method ? Color.blue : Color.clear, lineWidth: 1.5)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundColor(.white)
-                    }
-                }
-            }
-            .padding()
-        }
-    }
-
-    private func iconForMethod(_ method: DecompileMethod) -> String {
-        switch method {
-        case .apktool: return "hammer"
-        case .jadx:    return "doc.text.magnifyingglass"
-        case .both:    return "arrow.triangle.branch"
-        }
-    }
-
-    // MARK: - 详细选项
-    private var detailOptionsSection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                GlassSectionHeader(title: "详细选项")
-
-                if decompileMethod == .apktool || decompileMethod == .both {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Apktool 选项")
-                            .font(.subheadline.bold())
-                            .foregroundColor(.blue.opacity(0.9))
-
-                        GlassListRow {
-                            Toggle(isOn: $decodeSmali) { Text("反编译Smali代码").font(.caption).foregroundColor(.white) }
-                                .toggleStyle(.switch).tint(.blue)
-                        }
-                        GlassListRow {
-                            Toggle(isOn: $decodeResources) { Text("反编译资源文件").font(.caption).foregroundColor(.white) }
-                                .toggleStyle(.switch).tint(.blue)
-                        }
-                        GlassListRow {
-                            Toggle(isOn: $decodeManifest) { Text("反编译AndroidManifest").font(.caption).foregroundColor(.white) }
-                                .toggleStyle(.switch).tint(.blue)
-                        }
-                        GlassListRow {
-                            Toggle(isOn: $noRes) { Text("不反编译资源(保持原始)").font(.caption).foregroundColor(.white) }
-                                .toggleStyle(.switch).tint(.blue)
-                        }
-                        GlassListRow {
-                            Toggle(isOn: $forceDecode) { Text("强制反编译(忽略错误)").font(.caption).foregroundColor(.white) }
-                                .toggleStyle(.switch).tint(.blue)
-                        }
-                    }
-                    .padding(10)
-                    .background(.white.opacity(0.04))
-                    .cornerRadius(8)
-                }
-
-                if decompileMethod == .jadx || decompileMethod == .both {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("JADX 选项")
-                            .font(.subheadline.bold())
-                            .foregroundColor(.orange.opacity(0.9))
-
-                        GlassListRow {
-                            Toggle(isOn: $showJavaCode) { Text("输出Java源代码").font(.caption).foregroundColor(.white) }
-                                .toggleStyle(.switch).tint(.orange)
-                        }
-                        GlassListRow {
-                            Toggle(isOn: $decompileInline) { Text("内联反编译(简化解构)").font(.caption).foregroundColor(.white) }
-                                .toggleStyle(.switch).tint(.orange)
-                        }
-                        GlassListRow {
-                            Toggle(isOn: $showLineNumbers) { Text("显示行号映射").font(.caption).foregroundColor(.white) }
-                                .toggleStyle(.switch).tint(.orange)
-                        }
-                        GlassListRow {
-                            Toggle(isOn: $escapeUnicode) { Text("转义Unicode字符").font(.caption).foregroundColor(.white) }
-                                .toggleStyle(.switch).tint(.orange)
-                        }
-                        GlassListRow {
-                            Toggle(isOn: $showInconsistentCode) { Text("显示不一致代码").font(.caption).foregroundColor(.white) }
-                                .toggleStyle(.switch).tint(.orange)
-                        }
-                    }
-                    .padding(10)
-                    .background(.white.opacity(0.04))
-                    .cornerRadius(8)
-                }
-            }
-            .padding()
-        }
-    }
-
-    // MARK: - 分析选项
-    private var analysisOptionsSection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                GlassSectionHeader(title: "分析选项")
-
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    GlassListRow {
-                        Toggle(isOn: $analyzePermissions) {
-                            Label("权限分析", systemImage: "lock.shield")
-                                .font(.caption).foregroundColor(.white)
-                        }
-                        .toggleStyle(.switch).tint(.green)
-                    }
-
-                    GlassListRow {
-                        Toggle(isOn: $analyzeComponents) {
-                            Label("组件分析", systemImage: "puzzlepiece.extension")
-                                .font(.caption).foregroundColor(.white)
-                        }
-                        .toggleStyle(.switch).tint(.green)
-                    }
-
-                    GlassListRow {
-                        Toggle(isOn: $analyzeClasses) {
-                            Label("类结构分析", systemImage: "square.stack.3d.down.right")
-                                .font(.caption).foregroundColor(.white)
-                        }
-                        .toggleStyle(.switch).tint(.green)
-                    }
-
-                    GlassListRow {
-                        Toggle(isOn: $analyzeStrings) {
-                            Label("字符串提取", systemImage: "textformat")
-                                .font(.caption).foregroundColor(.white)
-                        }
-                        .toggleStyle(.switch).tint(.green)
-                    }
-
-                    GlassListRow {
-                        Toggle(isOn: $analyzeAPI) {
-                            Label("API调用分析", systemImage: "antenna.radiowaves.left.and.right")
-                                .font(.caption).foregroundColor(.white)
-                        }
-                        .toggleStyle(.switch).tint(.green)
-                    }
-
-                    GlassListRow {
-                        Toggle(isOn: $analyzeSecurity) {
-                            Label("安全风险检测", systemImage: "exclamationmark.shield")
-                                .font(.caption).foregroundColor(.white)
-                        }
-                        .toggleStyle(.switch).tint(.green)
-                    }
-                }
-            }
-            .padding()
-        }
-    }
-
-    // MARK: - 操作区域
-    private var actionSection: some View {
-        VStack(spacing: 16) {
-            if isRunning {
-                VStack(spacing: 8) {
-                    ProgressView(value: progress, total: 1.0)
-                        .progressViewStyle(.linear)
-                        .tint(.blue)
-                        .animation(.easeInOut, value: progress)
-
-                    Text("\(Int(progress * 100))%")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.6))
-                }
-
-                GlassButton(title: "取消", icon: "stop.circle") {
-                    isRunning = false
-                }
-                .foregroundColor(.red)
-            } else {
-                GlassButton(
-                    title: "开始逆向",
-                    icon: "play.fill"
-                ) {
-                    startReverseEngineering()
-                }
-                .disabled(apkFilePath.isEmpty)
-                .opacity(apkFilePath.isEmpty ? 0.5 : 1)
-            }
-        }
-        .padding()
-        .glassCard()
-    }
-
-    // MARK: - 逻辑
-    private func startReverseEngineering() {
-        guard !apkFilePath.isEmpty else { return }
-        isRunning = true
-        progress = 0
-
-        let steps: [(Double, String)] = [
-            (0.1, "正在验证APK文件..."),
-            (0.2, "正在解析APK结构..."),
-            (0.4, "正在反编译资源文件..."),
-            (0.6, "正在反编译源代码..."),
-            (0.8, "正在执行分析..."),
-            (1.0, "逆向完成")
-        ]
-
-        for (idx, step) in steps.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(idx) * 0.8) {
-                withAnimation {
-                    progress = step.0
-                    currentStep = step.1
-                }
-                if idx == steps.count - 1 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        isRunning = false
-                        resultMessage = """
-                        APK逆向完成！
-                        输出目录: \(outputDir)/\(URL(fileURLWithPath: apkFilePath).deletingPathExtension().lastPathComponent)
-                        使用工具: \(decompileMethod.rawValue)
-                        分析项: \(analyzedItemsCount()) 项
-                        """
-                        showResult = true
-                    }
-                }
-            }
-        }
-    }
-
-    private func analyzedItemsCount() -> Int {
-        [analyzePermissions, analyzeComponents, analyzeClasses,
-         analyzeStrings, analyzeAPI, analyzeSecurity].filter { $0 }.count
+// MARK: - Preview
+struct ReverseEngineeringView_Previews: PreviewProvider {
+    static var previews: some View {
+        ReverseEngineeringView()
+            .environmentObject(AppState())
+            .preferredColorScheme(.dark)
     }
 }

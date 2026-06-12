@@ -1,193 +1,161 @@
 import SwiftUI
 
-// MARK: - AIConfigView
 struct AIConfigView: View {
-    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+    @State private var localConfig: AIConfig
+    @State private var showApiKey: Bool = false
+    @State private var hasChanges: Bool = false
 
-    @State private var selectedProvider: AIProvider = .openAI
-    @State private var apiKey: String = ""
-    @State private var baseURL: String = ""
-    @State private var selectedModel: String = "gpt-4"
-    @State private var temperature: Double = 0.7
-    @State private var maxTokens: Double = 2048
-    @State private var useProxy = false
-    @State private var proxyHost: String = ""
-    @State private var proxyPort: String = "8080"
-    @State private var showAPIKey = false
-    @State private var isTesting = false
-    @State private var testResult: String?
-    @State private var testSuccess = false
-    @State private var showSaveAlert = false
-
-    // 模型选项
-    private let openAIModels = ["gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
-    private let claudeModels = ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku", "claude-3.5-sonnet"]
-    private let localModels = ["llama3", "qwen2", "deepseek", "mixtral"]
-
-    private var currentModels: [String] {
-        switch selectedProvider {
-        case .openAI: return openAIModels
-        case .claude: return claudeModels
-        case .local: return localModels
-        case .custom: return ["custom-model"]
-        }
+    init() {
+        _localConfig = State(initialValue: AIConfig())
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // API 服务商
-                providerSection
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // API 提供商选择
+                    providerSection
 
-                // API 密钥
-                apiKeySection
+                    // API Key 输入
+                    apiKeySection
 
-                // API 地址
-                apiURLSection
+                    // 模型选择
+                    modelSection
 
-                // 模型选择
-                modelSection
+                    // 温度滑块
+                    temperatureSection
 
-                // 参数配置
-                parameterSection
+                    // 最大 Token
+                    maxTokensSection
 
-                // 代理设置
-                proxySection
-
-                // 操作按钮
-                actionButtons
-
-                // 测试结果
-                if let result = testResult {
-                    testResultView
+                    // 系统提示词
+                    systemPromptSection
+                }
+                .padding()
+            }
+            .background(.ultraThinMaterial)
+            .navigationTitle("AI 配置")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    GlassButton(title: "取消", icon: "xmark", color: .secondary) {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    GlassButton(title: "保存", icon: "checkmark", color: .blue) {
+                        saveConfig()
+                    }
                 }
             }
-            .padding()
-        }
-        .glassBackground()
-        .alert("配置已保存", isPresented: $showSaveAlert) {
-            Button("确定", role: .cancel) {}
-        } message: {
-            Text("AI 配置已成功保存，可以在聊天中使用。")
-        }
-        .onAppear {
-            loadConfig()
+            .onAppear {
+                localConfig = appState.aiConfig
+            }
         }
     }
 
-    // MARK: - API 服务商
+    // MARK: - API 提供商选择
     private var providerSection: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                GlassSectionHeader(title: "API 服务商", systemImage: "globe")
+                GlassSectionHeader(title: "API 提供商", icon: "server.rack")
 
-                HStack(spacing: 12) {
-                    ForEach(AIProvider.allCases, id: \.self) { provider in
-                        Button {
-                            withAnimation {
-                                selectedProvider = provider
-                                updateDefaultConfig()
-                            }
-                        } label: {
-                            VStack(spacing: 8) {
-                                Image(systemName: providerIcon(provider))
-                                    .font(.title2)
-                                    .foregroundColor(selectedProvider == provider ? .white : .primary)
-                                Text(providerText(provider))
-                                    .font(.caption)
-                                    .foregroundColor(selectedProvider == provider ? .white : .primary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(selectedProvider == provider ?
-                                        LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing) :
-                                        LinearGradient(colors: [Color(.systemGray6)], startPoint: .top, endPoint: .bottom))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(selectedProvider == provider ? Color.clear : .white.opacity(0.1), lineWidth: 0.5)
-                            )
-                        }
-                        .buttonStyle(.plain)
+                HStack(spacing: 10) {
+                    ForEach(AIProvider.allCases) { provider in
+                        providerButton(provider)
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
             }
+            .padding(.vertical, 8)
         }
     }
 
-    // MARK: - API 密钥
+    private func providerButton(_ provider: AIProvider) -> some View {
+        Button(action: {
+            localConfig.provider = provider
+            localConfig.model = provider.defaultModel
+            hasChanges = true
+        }) {
+            VStack(spacing: 6) {
+                Image(systemName: providerIcon(for: provider))
+                    .font(.title3)
+                Text(provider.rawValue)
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(localConfig.provider == provider
+                        ? AnyShapeStyle(Color.accentColor.opacity(0.15))
+                        : AnyShapeStyle(.thinMaterial)
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        localConfig.provider == provider
+                            ? Color.accentColor.opacity(0.4)
+                            : .white.opacity(0.08),
+                        lineWidth: 0.5
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func providerIcon(for provider: AIProvider) -> String {
+        switch provider {
+        case .openAI: return "brain"
+        case .claude: return "sparkles"
+        case .gemini: return "star.circle"
+        case .custom: return "gearshape.2"
+        }
+    }
+
+    // MARK: - API Key
     private var apiKeySection: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                GlassSectionHeader(title: "API 密钥", systemImage: "key.fill")
+                GlassSectionHeader(title: "API Key", icon: "key.fill")
 
-                HStack {
-                    if showAPIKey {
-                        TextField("输入 API 密钥", text: $apiKey)
+                HStack(spacing: 8) {
+                    if showApiKey {
+                        TextField("输入 API Key", text: $localConfig.apiKey)
+                            .font(.system(size: 14, design: .monospaced))
                             .textFieldStyle(.plain)
-                            .font(.system(.body, design: .monospaced))
+                            .onChange(of: localConfig.apiKey) { _ in
+                                hasChanges = true
+                            }
                     } else {
-                        SecureField("输入 API 密钥", text: $apiKey)
+                        SecureField("输入 API Key", text: $localConfig.apiKey)
+                            .font(.system(size: 14, design: .monospaced))
                             .textFieldStyle(.plain)
-                            .font(.system(.body, design: .monospaced))
+                            .onChange(of: localConfig.apiKey) { _ in
+                                hasChanges = true
+                            }
                     }
 
-                    Button {
-                        showAPIKey.toggle()
-                    } label: {
-                        Image(systemName: showAPIKey ? "eye.slash" : "eye")
-                            .foregroundColor(.secondary)
+                    Button(action: { showApiKey.toggle() }) {
+                        Image(systemName: showApiKey ? "eye.slash.fill" : "eye.fill")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(.regularMaterial)
+                        .fill(.thinMaterial)
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                )
-
-                Text("API 密钥仅保存在本地设备上，不会上传到服务器")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                .padding(.horizontal, 16)
             }
-        }
-    }
-
-    // MARK: - API 地址
-    private var apiURLSection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                GlassSectionHeader(title: "API 地址", systemImage: "link")
-
-                TextField("https://api.openai.com/v1", text: $baseURL)
-                    .textFieldStyle(.plain)
-                    .font(.system(.body, design: .monospaced))
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(.regularMaterial)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(.white.opacity(0.1), lineWidth: 0.5)
-                    )
-
-                if selectedProvider == .openAI {
-                    Text("OpenAI 默认地址: https://api.openai.com/v1")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else if selectedProvider == .claude {
-                    Text("Claude 默认地址: https://api.anthropic.com/v1")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
+            .padding(.vertical, 8)
         }
     }
 
@@ -195,263 +163,165 @@ struct AIConfigView: View {
     private var modelSection: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                GlassSectionHeader(title: "模型选择", systemImage: "cpu")
+                GlassSectionHeader(title: "模型", icon: "cpu")
 
-                Picker("选择模型", selection: $selectedModel) {
-                    ForEach(currentModels, id: \.self) { model in
-                        Text(model)
-                            .tag(model)
+                VStack(spacing: 8) {
+                    ForEach(availableModels, id: \.self) { model in
+                        modelRow(model)
                     }
                 }
-                .pickerStyle(.menu)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(.regularMaterial)
-                )
-
-                HStack {
-                    Image(systemName: "info.circle")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("不同模型的性能和价格有所差异，请根据需求选择")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
             }
+            .padding(.vertical, 8)
         }
     }
 
-    // MARK: - 参数配置
-    private var parameterSection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                GlassSectionHeader(title: "参数配置", systemImage: "slider.horizontal.3")
-
-                // 温度
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("温度 (Temperature)")
-                            .font(.subheadline)
-                        Spacer()
-                        Text(String(format: "%.1f", temperature))
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Slider(value: $temperature, in: 0...2, step: 0.1)
-                        .tint(.blue)
-
-                    HStack {
-                        Text("精确")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("创造")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Divider()
-
-                // 最大 Token
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("最大 Token")
-                            .font(.subheadline)
-                        Spacer()
-                        Text("\(Int(maxTokens))")
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Slider(value: $maxTokens, in: 256...8192, step: 256)
-                        .tint(.purple)
-
-                    HStack {
-                        Text("256")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("8192")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
+    private var availableModels: [String] {
+        switch localConfig.provider {
+        case .openAI:
+            return ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+        case .claude:
+            return ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"]
+        case .gemini:
+            return ["gemini-pro", "gemini-ultra"]
+        case .custom:
+            return []
         }
     }
 
-    // MARK: - 代理设置
-    private var proxySection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                GlassSectionHeader(title: "代理设置", systemImage: "network")
-
-                Toggle(isOn: $useProxy) {
-                    HStack {
-                        Image(systemName: "shield.lefthalf.filled")
-                            .foregroundColor(.blue)
-                        Text("启用代理")
-                            .font(.subheadline)
-                    }
-                }
-                .toggleStyle(.switch)
-
-                if useProxy {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("代理地址")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            TextField("127.0.0.1", text: $proxyHost)
-                                .textFieldStyle(.plain)
-                                .font(.system(.body, design: .monospaced))
-                                .padding(10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(.regularMaterial)
-                                )
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("端口")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            TextField("8080", text: $proxyPort)
-                                .textFieldStyle(.plain)
-                                .font(.system(.body, design: .monospaced))
-                                .padding(10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(.regularMaterial)
-                                )
-                                .frame(width: 100)
-                        }
-                    }
-
-                    Text("支持的代理协议: HTTP, HTTPS, SOCKS5")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-    }
-
-    // MARK: - 操作按钮
-    private var actionButtons: some View {
-        HStack(spacing: 16) {
-            // 测试连接
-            GlassButton(title: "测试连接", icon: "antenna.radiowaves.left.and.right") {
-                testConnection()
-            }
-            .disabled(isTesting || apiKey.isEmpty)
-
-            // 保存配置
-            GlassButton(title: "保存配置", icon: "checkmark.circle") {
-                saveConfig()
-            }
-            .disabled(apiKey.isEmpty)
-        }
-        .padding(.top, 8)
-    }
-
-    // MARK: - 测试结果
-    private var testResultView: some View {
-        GlassCard {
-            HStack(spacing: 12) {
-                Image(systemName: testSuccess ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(testSuccess ? .green : .red)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(testSuccess ? "连接成功" : "连接失败")
-                        .font(.headline)
-                    Text(testResult ?? "")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
+    private func modelRow(_ model: String) -> some View {
+        Button(action: {
+            localConfig.model = model
+            hasChanges = true
+        }) {
+            HStack {
+                Image(systemName: localConfig.model == model ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(localConfig.model == model ? .blue : .tertiary)
+                Text(model)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.primary)
                 Spacer()
             }
-            .padding(8)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(localConfig.model == model
+                        ? AnyShapeStyle(.blue.opacity(0.1))
+                        : AnyShapeStyle(.clear)
+                    )
+            )
         }
+        .buttonStyle(.plain)
     }
 
-    // MARK: - 辅助方法
-    private func providerIcon(_ provider: AIProvider) -> String {
-        switch provider {
-        case .openAI: return "sparkles"
-        case .claude: return "leaf"
-        case .local: return "desktopcomputer"
-        case .custom: return "gearshape"
-        }
-    }
+    // MARK: - 温度滑块
+    private var temperatureSection: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                GlassSectionHeader(title: "温度 (Temperature)", icon: "thermometer.medium")
 
-    private func providerText(_ provider: AIProvider) -> String {
-        switch provider {
-        case .openAI: return "OpenAI"
-        case .claude: return "Claude"
-        case .local: return "本地模型"
-        case .custom: return "自定义"
-        }
-    }
+                VStack(spacing: 8) {
+                    Slider(value: $localConfig.temperature, in: 0...2, step: 0.1) {
+                        Text("温度")
+                    }
+                    .onChange(of: localConfig.temperature) { _ in
+                        hasChanges = true
+                    }
+                    .padding(.horizontal, 16)
 
-    private func updateDefaultConfig() {
-        switch selectedProvider {
-        case .openAI:
-            baseURL = "https://api.openai.com/v1"
-            selectedModel = "gpt-4"
-        case .claude:
-            baseURL = "https://api.anthropic.com/v1"
-            selectedModel = "claude-3-sonnet"
-        case .local:
-            baseURL = "http://localhost:11434/v1"
-            selectedModel = "llama3"
-        case .custom:
-            baseURL = ""
-            selectedModel = "custom-model"
-        }
-    }
-
-    private func loadConfig() {
-        selectedProvider = appState.aiProvider
-        apiKey = appState.aiAPIKey
-        baseURL = appState.aiBaseURL
-        selectedModel = appState.aiModel
-    }
-
-    private func saveConfig() {
-        appState.aiProvider = selectedProvider
-        appState.aiAPIKey = apiKey
-        appState.aiBaseURL = baseURL
-        appState.aiModel = selectedModel
-
-        showSaveAlert = true
-    }
-
-    private func testConnection() {
-        isTesting = true
-        testResult = nil
-
-        // 模拟测试连接
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            if apiKey.hasPrefix("sk-") || apiKey.hasPrefix("sk-ant-") {
-                testSuccess = true
-                testResult = "API 连接测试通过。延迟: 120ms"
-            } else {
-                testSuccess = false
-                testResult = "API 密钥格式不正确。OpenAI 密钥以 'sk-' 开头，Claude 密钥以 'sk-ant-' 开头"
+                    HStack {
+                        GlassBadge(text: "精确", color: .blue)
+                        Spacer()
+                        Text(String(format: "%.1f", localConfig.temperature))
+                            .font(.system(size: 14, weight: .medium, design: .monospaced))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        GlassBadge(text: "创意", color: .orange)
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .padding(.bottom, 8)
             }
-            isTesting = false
+            .padding(.vertical, 8)
         }
+    }
+
+    // MARK: - 最大 Token
+    private var maxTokensSection: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                GlassSectionHeader(title: "最大 Token 数", icon: "number")
+
+                HStack {
+                    TextField("Token 数量", value: $localConfig.maxTokens, format: .number)
+                        .font(.system(size: 14))
+                        .textFieldStyle(.plain)
+                        .onChange(of: localConfig.maxTokens) { _ in
+                            hasChanges = true
+                        }
+
+                    Stepper("", value: $localConfig.maxTokens, in: 256...32768, step: 256)
+                        .labelsHidden()
+                        .onChange(of: localConfig.maxTokens) { _ in
+                            hasChanges = true
+                        }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(.thinMaterial)
+                )
+                .padding(.horizontal, 16)
+
+                Text("当前: \(localConfig.maxTokens) tokens")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    // MARK: - 系统提示词
+    private var systemPromptSection: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                GlassSectionHeader(title: "系统提示词", icon: "text.quote")
+
+                TextEditor(text: $localConfig.systemPrompt)
+                    .font(.system(size: 13))
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                    .frame(minHeight: 100)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(.thinMaterial)
+                    )
+                    .onChange(of: localConfig.systemPrompt) { _ in
+                        hasChanges = true
+                    }
+                    .padding(.horizontal, 16)
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    // MARK: - 保存配置
+    private func saveConfig() {
+        appState.aiConfig = localConfig
+        dismiss()
     }
 }
 
-// MARK: - Preview 占位
-extension LinearGradient {
-    init(colors: [Color], startPoint: UnitPoint, endPoint: UnitPoint) {
-        self.init(gradient: Gradient(colors: colors), startPoint: startPoint, endPoint: endPoint)
+// MARK: - Preview
+struct AIConfigView_Previews: PreviewProvider {
+    static var previews: some View {
+        AIConfigView()
+            .environmentObject(AppState())
+            .preferredColorScheme(.dark)
     }
 }

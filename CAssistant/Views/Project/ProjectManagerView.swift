@@ -1,341 +1,210 @@
 import SwiftUI
 
-// MARK: - 项目模型
-struct ProjectItem: Identifiable {
-    let id = UUID()
-    var name: String
-    var path: String
-    var type: ProjectType
-    var createdAt: Date
-    var files: [ProjectFileNode]
-}
-
-struct ProjectFileNode: Identifiable {
-    let id = UUID()
-    var name: String
-    var isDirectory: Bool
-    var children: [ProjectFileNode]?
-}
-
-enum ProjectType: String, CaseIterable {
-    case apkReverse    = "APK逆向"
-    case apkModify     = "APK修改"
-    case apkDevelop    = "APK开发"
-    case apkHook       = "Hook开发"
-
-    var icon: String {
-        switch self {
-        case .apkReverse: return "magnifyingglass.circle"
-        case .apkModify:  return "wrench.and.screwdriver"
-        case .apkDevelop: return "hammer.circle"
-        case .apkHook:    return "link.circle"
-        }
-    }
-}
-
-// MARK: - ProjectManagerView
 struct ProjectManagerView: View {
-    @EnvironmentObject private var appState: AppState
-
-    @State private var projects: [ProjectItem] = []
-    @State private var selectedProject: ProjectItem?
-    @State private var showNewProject = false
-    @State private var showFileTree = true
-
-    // 模拟数据
-    private let mockProjects: [ProjectItem] = [
-        ProjectItem(
-            name: "WeChatPlugin",
-            path: "/Users/admin/Projects/WeChatPlugin",
-            type: .apkHook,
-            createdAt: Date().addingTimeInterval(-86400 * 10),
-            files: [
-                ProjectFileNode(name: "app", isDirectory: true, children: [
-                    ProjectFileNode(name: "src", isDirectory: true, children: [
-                        ProjectFileNode(name: "MainActivity.java", isDirectory: false, children: nil),
-                        ProjectFileNode(name: "HookManager.java", isDirectory: false, children: nil)
-                    ]),
-                    ProjectFileNode(name: "res", isDirectory: true, children: [
-                        ProjectFileNode(name: "layout", isDirectory: true, children: nil),
-                        ProjectFileNode(name: "values", isDirectory: true, children: nil)
-                    ]),
-                    ProjectFileNode(name: "build.gradle", isDirectory: false, children: nil)
-                ]),
-                ProjectFileNode(name: "libs", isDirectory: true, children: [
-                    ProjectFileNode(name: "dex2jar.jar", isDirectory: false, children: nil)
-                ]),
-                ProjectFileNode(name: "README.md", isDirectory: false, children: nil)
-            ]
-        ),
-        ProjectItem(
-            name: "TargetAppDecode",
-            path: "/Users/admin/Projects/TargetAppDecode",
-            type: .apkReverse,
-            createdAt: Date().addingTimeInterval(-86400 * 3),
-            files: [
-                ProjectFileNode(name: "sources", isDirectory: true, children: [
-                    ProjectFileNode(name: "com", isDirectory: true, children: nil)
-                ]),
-                ProjectFileNode(name: "smali", isDirectory: true, children: nil),
-                ProjectFileNode(name: "AndroidManifest.xml", isDirectory: false, children: nil)
-            ]
-        ),
-        ProjectItem(
-            name: "ModGame",
-            path: "/Users/admin/Projects/ModGame",
-            type: .apkModify,
-            createdAt: Date().addingTimeInterval(-86400 * 20),
-            files: [
-                ProjectFileNode(name: "original", isDirectory: true, children: nil),
-                ProjectFileNode(name: "modified", isDirectory: true, children: nil),
-                ProjectFileNode(name: "patches", isDirectory: true, children: nil)
-            ]
-        )
-    ]
+    @EnvironmentObject var appState: AppState
+    @State private var showExportAlert = false
+    @State private var exportMessage = ""
+    @State private var showCleanConfirm = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // 顶部工具栏
-            toolbarView
+        ScrollView {
+            VStack(spacing: 16) {
+                // 项目信息
+                projectInfoSection
 
-            // 主内容区
-            GlassSplitView {
-                // 项目列表
-                projectListView
-
-                // 项目详情
-                if let project = selectedProject {
-                    projectDetailView(project: project)
-                        .frame(minWidth: 400)
-                } else {
-                    emptyDetailView
-                        .frame(minWidth: 400)
-                }
+                // 功能列表
+                featureListSection
             }
+            .padding()
         }
-        .glassBackground()
-        .sheet(isPresented: $showNewProject) {
-            NewProjectView()
+        .background(.ultraThinMaterial)
+        .navigationTitle("项目管理")
+        .alert("导出报告", isPresented: $showExportAlert) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text(exportMessage)
         }
-        .onAppear {
-            projects = mockProjects
-            if selectedProject == nil, let first = projects.first {
-                selectedProject = first
+        .alert("确认清理", isPresented: $showCleanConfirm) {
+            Button("取消", role: .cancel) {}
+            Button("清理", role: .destructive) {
+                appState.reset()
             }
+        } message: {
+            Text("这将清除所有分析数据，包括提取的文件和日志。此操作不可撤销。")
         }
     }
 
-    // MARK: - 顶部工具栏
-    private var toolbarView: some View {
-        HStack {
-            Text("项目管理")
-                .font(.title2.bold())
-                .foregroundColor(.white)
-
-            Spacer()
-
-            GlassButton(title: "新建项目", icon: "plus") {
-                showNewProject = true
-            }
-
-            GlassButton(title: "打开项目", icon: "folder") {
-                openProject()
-            }
-
-            GlassButton(title: "保存项目", icon: "square.and.arrow.down") {
-                saveProject()
-            }
-        }
-        .padding()
-        .glassCard()
-    }
-
-    // MARK: - 项目列表
-    private var projectListView: some View {
+    // MARK: - 项目信息
+    private var projectInfoSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            GlassSectionHeader(title: "项目列表 (\(projects.count))")
+            GlassSectionHeader(title: "项目信息", icon: "folder.circle.fill")
 
-            if projects.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "folder.badge.questionmark")
-                        .font(.system(size: 48))
-                        .foregroundColor(.white.opacity(0.3))
-                    Text("暂无项目")
-                        .foregroundColor(.white.opacity(0.5))
-                    GlassButton(title: "新建项目", icon: "plus") {
-                        showNewProject = true
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(projects) { project in
-                            projectRow(project)
-                        }
-                    }
-                    .padding(.horizontal, 4)
-                }
-            }
-        }
-        .frame(minWidth: 280)
-        .padding()
-    }
-
-    private func projectRow(_ project: ProjectItem) -> some View {
-        GlassCard {
-            Button {
-                selectedProject = project
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: project.type.icon)
-                        .font(.title2)
-                        .foregroundColor(.white)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(project.name)
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        Text(project.path)
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.6))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Text(project.type.rawValue)
-                            .font(.caption2)
-                            .foregroundColor(.blue.opacity(0.8))
-                    }
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(formattedDate(project.createdAt))
-                            .font(.caption2)
-                            .foregroundColor(.white.opacity(0.5))
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.3))
-                    }
-                }
-                .padding(12)
-            }
-            .buttonStyle(.plain)
-        }
-        .overlay(
-            selectedProject?.id == project.id ?
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.blue, lineWidth: 2)
-                : nil
-        )
-    }
-
-    // MARK: - 项目详情
-    private func projectDetailView(project: ProjectItem) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // 项目信息
             GlassCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    GlassSectionHeader(title: "项目信息")
-
-                    infoRow(label: "项目名称", value: project.name)
-                    infoRow(label: "路径", value: project.path)
-                    infoRow(label: "类型", value: project.type.rawValue)
-                    infoRow(label: "创建时间", value: formattedDate(project.createdAt))
+                VStack(spacing: 0) {
+                    GlassInfoRow(label: "项目名称", value: projectName, icon: "tag.fill")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "文件路径", value: appState.selectedFileURL?.path ?? "未加载", icon: "doc.fill")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "文件数量", value: "\(appState.files.count)", icon: "list.bullet")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "DEX 文件", value: "\(appState.dexFiles.count)", icon: "cube")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "Smali 文件", value: "\(appState.smaliFiles.count)", icon: "chevron.left.forwardslash.chevron.right")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "SO 库", value: "\(appState.soFiles.count)", icon: "square.stack.3d.up")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "提取路径", value: extractedPathDisplay, icon: "externaldrive.fill")
+                    Divider().background(.white.opacity(0.08))
+                    GlassInfoRow(label: "日志条目", value: "\(appState.analysisLog.count)", icon: "text.alignleft")
                 }
-                .padding()
-            }
-
-            // 文件树
-            if showFileTree {
-                GlassCard {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            GlassSectionHeader(title: "项目文件")
-                            Spacer()
-                            Button {
-                                withAnimation { showFileTree.toggle() }
-                            } label: {
-                                Image(systemName: "eye.slash")
-                                    .foregroundColor(.white.opacity(0.6))
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        fileTreeView(nodes: project.files, level: 0)
-                    }
-                    .padding()
-                }
-            }
-
-            Spacer()
-        }
-        .padding()
-    }
-
-    @ViewBuilder
-    private func fileTreeView(nodes: [ProjectFileNode], level: Int) -> some View {
-        ForEach(nodes) { node in
-            GlassListRow {
-                HStack(spacing: 8) {
-                    Image(systemName: node.isDirectory ? "folder" : "doc.text")
-                        .foregroundColor(node.isDirectory ? .yellow.opacity(0.8) : .white.opacity(0.6))
-                        .font(.system(size: 12))
-
-                    Text(node.name)
-                        .font(.system(size: 13, design: .monospaced))
-                        .foregroundColor(.white)
-
-                    Spacer()
-                }
-                .padding(.leading, CGFloat(level * 20))
                 .padding(.vertical, 4)
             }
+        }
+    }
 
-            if let children = node.children {
-                AnyView(fileTreeView(nodes: children, level: level + 1))
+    private var projectName: String {
+        appState.selectedFileName.isEmpty ? "未加载" : appState.selectedFileName
+    }
+
+    private var extractedPathDisplay: String {
+        appState.extractedPath.isEmpty ? "未提取" : {
+            let components = appState.extractedPath.components(separatedBy: "/")
+            return components.suffix(2).joined(separator: "/")
+        }()
+    }
+
+    // MARK: - 功能列表
+    private var featureListSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            GlassSectionHeader(title: "操作", icon: "hammer.fill")
+
+            GlassCard {
+                VStack(spacing: 4) {
+                    GlassNavRow(
+                        title: "项目文件浏览",
+                        icon: "folder.fill",
+                        subtitle: "浏览和分析项目中的文件"
+                    ) {
+                        // Navigate to file list
+                    }
+
+                    GlassNavRow(
+                        title: "提取 APK 内容",
+                        icon: "tray.and.arrow.down.fill",
+                        subtitle: appState.extractedPath.isEmpty ? "尚未提取" : "已提取到本地"
+                    ) {
+                        // Trigger extraction
+                    }
+
+                    GlassNavRow(
+                        title: "导出分析报告",
+                        icon: "square.and.arrow.up.fill",
+                        subtitle: "生成包含分析结果的文本报告"
+                    ) {
+                        exportReport()
+                    }
+
+                    GlassNavRow(
+                        title: "清理临时文件",
+                        icon: "trash.fill",
+                        subtitle: "重置所有分析数据"
+                    ) {
+                        showCleanConfirm = true
+                    }
+                }
+                .padding(.vertical, 4)
             }
         }
     }
 
-    private func infoRow(label: String, value: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(label + ":")
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.6))
-                .frame(width: 80, alignment: .trailing)
-            Text(value)
-                .font(.subheadline)
-                .foregroundColor(.white)
-            Spacer()
+    // MARK: - 导出报告
+    private func exportReport() {
+        guard !appState.selectedFileName.isEmpty else {
+            exportMessage = "请先加载 APK 文件后再导出报告。"
+            showExportAlert = true
+            return
         }
-    }
 
-    // MARK: - 空详情
-    private var emptyDetailView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "square.stack.3d.up.slash")
-                .font(.system(size: 64))
-                .foregroundColor(.white.opacity(0.2))
-            Text("请选择一个项目")
-                .font(.title3)
-                .foregroundColor(.white.opacity(0.4))
+        var report = ""
+        report += "========================================\n"
+        report += "  CAssistant - APK 分析报告\n"
+        report += "========================================\n\n"
+
+        // 基本信息
+        report += "【基本信息】\n"
+        report += "  文件名: \(appState.selectedFileName)\n"
+        report += "  包名: \(appState.apkInfo.packageName)\n"
+        report += "  版本: \(appState.apkInfo.versionName) (\(appState.apkInfo.versionCode))\n"
+        report += "  应用名: \(appState.apkInfo.appName)\n"
+        report += "  Min SDK: \(appState.apkInfo.minSdkVersion)\n"
+        report += "  Target SDK: \(appState.apkInfo.targetSdkVersion)\n"
+        report += "  MD5: \(appState.apkInfo.md5)\n"
+        report += "  SHA1: \(appState.apkInfo.sha1)\n\n"
+
+        // Manifest 信息
+        report += "【Manifest 信息】\n"
+        report += "  声明权限: \(appState.manifest.declaredPermissions.count) 个\n"
+        report += "  使用权限: \(appState.manifest.usesPermissions.count) 个\n"
+        report += "  特性: \(appState.manifest.features.count) 个\n"
+        report += "  库: \(appState.manifest.libraries.count) 个\n\n"
+
+        // 权限详情
+        report += "【权限详情】\n"
+        for perm in appState.permissions {
+            report += "  - \(perm.name) [\(perm.level)] (\(perm.riskLevel.rawValue))\n"
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
+        report += "\n"
 
-    // MARK: - 辅助方法
-    private func formattedDate(_ date: Date) -> String {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd HH:mm"
-        fmt.locale = Locale(identifier: "zh_CN")
-        return fmt.string(from: date)
-    }
+        // 证书信息
+        report += "【签名证书】\n"
+        for cert in appState.certificates {
+            report += "  主体: \(cert.subject)\n"
+            report += "  签发者: \(cert.issuer)\n"
+            report += "  序列号: \(cert.serialNumber)\n"
+            report += "  SHA1: \(cert.fingerprintSHA1)\n"
+            report += "  签名算法: \(cert.signatureAlgorithm)\n"
+            report += "  状态: \(cert.isValid ? "有效" : "无效")\n\n"
+        }
 
-    private func openProject() {
-        // 打开项目逻辑
-    }
+        // 组件信息
+        report += "【组件列表】\n"
+        for comp in appState.components {
+            report += "  - [\(comp.componentType.rawValue)] \(comp.name)"
+            report += comp.exported ? " (已导出)" : ""
+            if !comp.permission.isEmpty {
+                report += " 权限: \(comp.permission)"
+            }
+            report += "\n"
+        }
+        report += "\n"
 
-    private func saveProject() {
-        // 保存项目逻辑
+        // 统计
+        report += "【文件统计】\n"
+        report += "  总文件数: \(appState.files.count)\n"
+        report += "  DEX 文件: \(appState.dexFiles.count)\n"
+        report += "  Smali 文件: \(appState.smaliFiles.count)\n"
+        report += "  SO 库: \(appState.soFiles.count)\n"
+        report += "  ARSC 文件: \(appState.arscFiles.count)\n\n"
+
+        report += "========================================\n"
+        report += "  报告生成时间: \(DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .medium))\n"
+        report += "========================================\n"
+
+        // 复制到剪贴板
+        #if os(iOS)
+        UIPasteboard.general.string = report
+        #endif
+
+        exportMessage = "报告已复制到剪贴板。\n\n\(report.prefix(300))..."
+        showExportAlert = true
+    }
+}
+
+// MARK: - Preview
+struct ProjectManagerView_Previews: PreviewProvider {
+    static var previews: some View {
+        ProjectManagerView()
+            .environmentObject(AppState())
+            .preferredColorScheme(.dark)
     }
 }
