@@ -375,7 +375,7 @@ struct SoAnalysisView: View {
 
                         Image(systemName: "chevron.right")
                             .font(.caption2)
-                            .foregroundColor(.tertiary)
+                            .foregroundStyle(.tertiary)
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 6)

@@ -18,8 +18,8 @@ private struct SmaliFileNode: Identifiable {
     let id = UUID()
     let name: String
     let isDirectory: Bool
-    let children: [SmaliFileNode]?
-    let content: String?
+    let children: [SmaliFileNode]? = nil
+    let content: String? = nil
 }
 
 // MARK: - 代码统计
@@ -107,7 +107,7 @@ private struct SmaliSyntaxHighlighter {
             let pattern = try? NSRegularExpression(pattern: "[vp]\\d+")
             if let matches = pattern?.matches(in: line, range: NSRange(location: 0, length: line.count)) {
                 for match in matches {
-                    let adjusted = NSRange(location: lineRange.location + match.location, length: match.length)
+                    let adjusted = NSRange(location: lineRange.location + match.range.location, length: match.range.length)
                     if let range = Range(adjusted, in: result) {
                         result[range].foregroundColor = SmaliSyntaxColors.register
                     }
@@ -118,7 +118,7 @@ private struct SmaliSyntaxHighlighter {
             let strPattern = try? NSRegularExpression(pattern: "\"[^\"]*\"")
             if let matches = strPattern?.matches(in: line, range: NSRange(location: 0, length: line.count)) {
                 for match in matches {
-                    let adjusted = NSRange(location: lineRange.location + match.location, length: match.length)
+                    let adjusted = NSRange(location: lineRange.location + match.range.location, length: match.range.length)
                     if let range = Range(adjusted, in: result) {
                         result[range].foregroundColor = SmaliSyntaxColors.string
                     }
@@ -173,7 +173,7 @@ struct SmaliViewerView: View {
             toolbarView
 
             // 主内容区
-            HSplitView {
+            GlassSplitView {
                 // 文件树
                 if showFileTree {
                     fileTreeView
@@ -289,8 +289,10 @@ struct SmaliViewerView: View {
             .buttonStyle(.plain)
 
             if let children = node.children {
-                ForEach(children) { child in
-                    fileTreeNodeView(node: child, level: level + 1)
+                Group {
+                    ForEach(children) { child in
+                        fileTreeNodeView(node: child, level: level + 1)
+                    }
                 }
             }
         }
@@ -335,7 +337,7 @@ struct SmaliViewerView: View {
                         .foregroundColor(.secondary)
                     Text("文件将显示在此处，支持语法高亮")
                         .font(.caption)
-                        .foregroundColor(.tertiary)
+                        .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }

@@ -153,7 +153,7 @@ struct AIChatView: View {
 
                 Text("当前模型：\(appState.aiModel)")
                     .font(.caption)
-                    .foregroundColor(.tertiary)
+                    .foregroundStyle(.tertiary)
                     .padding(.top, 4)
             }
 
@@ -213,11 +213,11 @@ struct AIChatView: View {
                     if message.role == .user {
                         Text("已发送")
                             .font(.caption2)
-                            .foregroundColor(.tertiary)
+                            .foregroundStyle(.tertiary)
                     }
                     Text(message.timestamp, style: .time)
                         .font(.caption2)
-                        .foregroundColor(.tertiary)
+                        .foregroundStyle(.tertiary)
                 }
             }
             .frame(maxWidth: UIScreen.main.bounds.width * 0.65, alignment: message.role == .user ? .trailing : .leading)

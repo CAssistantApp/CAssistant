@@ -166,6 +166,32 @@ struct GlassListRow<Content: View>: View {
     }
 }
 
+// MARK: - 玻璃分割视图（iOS 兼容的 HSplitView 替代）
+struct GlassSplitView<Left: View, Right: View>: View {
+    let left: Left
+    let right: Right
+
+    init(@ViewBuilder content: () -> TupleView<(Left, Right)>) {
+        let tuple = content()
+        self.left = tuple.value.0
+        self.right = tuple.value.1
+    }
+
+    init(left: Left, right: Right) {
+        self.left = left
+        self.right = right
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            left
+            Divider()
+                .background(.white.opacity(0.15))
+            right
+        }
+    }
+}
+
 // MARK: - 信息行（兼容 label:value:icon 格式）
 struct GlassInfoRow: View {
     let label: String

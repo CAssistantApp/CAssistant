@@ -212,7 +212,7 @@ struct ArscViewerView: View {
             toolbarView
 
             // 主内容
-            HSplitView {
+            GlassSplitView {
                 // 左侧：类型筛选 + 资源列表
                 VStack(spacing: 0) {
                     resourceTypeFilter
@@ -292,7 +292,7 @@ struct ArscViewerView: View {
                         .padding(.vertical, 6)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(selectedType == nil ? Color.accentColor.opacity(0.3) : .regularMaterial)
+                                .fill(selectedType == nil ? AnyShapeStyle(Color.accentColor.opacity(0.3)) : AnyShapeStyle(.regularMaterial))
                         )
                     }
                     .buttonStyle(.plain)
@@ -316,7 +316,7 @@ struct ArscViewerView: View {
                             .padding(.vertical, 6)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(selectedType == type ? type.color.opacity(0.3) : .regularMaterial)
+                                    .fill(selectedType == type ? AnyShapeStyle(type.color.opacity(0.3)) : AnyShapeStyle(.regularMaterial))
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
@@ -499,7 +499,7 @@ struct ArscViewerView: View {
                 .foregroundColor(.secondary)
             Text("支持按类型筛选和搜索资源")
                 .font(.caption)
-                .foregroundColor(.tertiary)
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

@@ -113,7 +113,7 @@ def analyze_apk(apk_path: str) -> dict:
     ]
     
     var body: some View {
-        HSplitView {
+        GlassSplitView {
             // 左侧：代码输入
             codeInputPanel
             
@@ -602,7 +602,7 @@ private struct AIFeatureCard: View {
             VStack(spacing: 6) {
                 Image(systemName: feature.icon)
                     .font(.title2)
-                    .foregroundStyle(isSelected ? .tint : .secondary)
+                    .foregroundColor(isSelected ? .accentColor : .secondary)
                 Text(feature.rawValue)
                     .font(.caption)
                     .fontWeight(isSelected ? .bold : .regular)
@@ -620,25 +620,5 @@ private struct AIFeatureCard: View {
             )
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - HSplitView 封装
-private struct HSplitView<Left: View, Right: View>: View {
-    let left: Left
-    let right: Right
-    
-    init(@ViewBuilder content: () -> TupleView<(Left, Right)>) {
-        let tuple = content()
-        self.left = tuple.value.0
-        self.right = tuple.value.1
-    }
-    
-    var body: some View {
-        HStack(spacing: 0) {
-            left
-            Divider()
-            right
-        }
     }
 }

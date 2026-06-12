@@ -99,7 +99,7 @@ struct ProjectManagerView: View {
             toolbarView
 
             // 主内容区
-            HSplitView {
+            GlassSplitView {
                 // 项目列表
                 projectListView
 
@@ -292,7 +292,9 @@ struct ProjectManagerView: View {
             }
 
             if let children = node.children {
-                fileTreeView(nodes: children, level: level + 1)
+                Group {
+                    fileTreeView(nodes: children, level: level + 1)
+                }
             }
         }
     }

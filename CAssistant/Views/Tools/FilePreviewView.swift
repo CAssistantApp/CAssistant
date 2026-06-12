@@ -12,7 +12,7 @@ struct FilePreviewView: View {
     @State private var showSearchBar: Bool = false
     
     var body: some View {
-        HSplitView {
+        GlassSplitView {
             // 左侧：文件树
             fileTreeSidebar
             
@@ -450,7 +450,7 @@ private struct FileTreeNodeView: View {
                 .padding(.horizontal, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(selectedFile?.id == node.id ? .thinMaterial : .clear)
+                        .fill(selectedFile?.id == node.id ? AnyShapeStyle(.thinMaterial) : AnyShapeStyle(.clear))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
@@ -471,26 +471,6 @@ private struct FileTreeNodeView: View {
                     .padding(.leading, 16)
                 }
             }
-        }
-    }
-}
-
-// MARK: - HSplitView 封装
-private struct HSplitView<Left: View, Right: View>: View {
-    let left: Left
-    let right: Right
-    
-    init(@ViewBuilder content: () -> TupleView<(Left, Right)>) {
-        let tuple = content()
-        self.left = tuple.value.0
-        self.right = tuple.value.1
-    }
-    
-    var body: some View {
-        HStack(spacing: 0) {
-            left
-            Divider()
-            right
         }
     }
 }

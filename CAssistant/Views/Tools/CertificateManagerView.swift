@@ -398,7 +398,7 @@ private struct CertificateRow: View {
         HStack(spacing: 12) {
             Image(systemName: "certificate")
                 .font(.title3)
-                .foregroundStyle(isSelected ? .tint : .secondary)
+                .foregroundColor(isSelected ? .accentColor : .secondary)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(cert.subject)

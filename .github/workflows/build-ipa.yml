@@ -37,9 +37,10 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: 📦 安装 xcodegen
+      - name: 📦 安装构建工具
         run: |
           brew install xcodegen
+          gem install xcpretty
 
       - name: 🏗️ 生成 Xcode 项目
         run: |

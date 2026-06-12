@@ -34,7 +34,7 @@ struct IDEEditorView: View {
     @State private var saveMessage = ""
     
     var body: some View {
-        HSplitView {
+        GlassSplitView {
             // 左侧：文件树
             if showFileTree {
                 fileTreePanel
@@ -59,9 +59,9 @@ struct IDEEditorView: View {
         }
         .navigationTitle("IDE编辑器")
         .background(Color.clear)
-        .onChange(of: codeContent) { newValue in
-            updateLineCount(newValue)
-            updateSyntaxHighlight(newValue)
+        .onChange(of: codeContent) { _ in
+            updateLineCount(codeContent)
+            updateSyntaxHighlight(codeContent)
         }
         .alert("新建文件", isPresented: $showNewFileAlert) {
             TextField("文件名", text: $newFileName)
@@ -677,7 +677,7 @@ private struct EditorFileRow: View {
             HStack(spacing: 8) {
                 Image(systemName: file.icon)
                     .font(.caption)
-                    .foregroundStyle(isSelected ? .tint : .secondary)
+                    .foregroundColor(isSelected ? .accentColor : .secondary)
                 Text(file.name)
                     .font(.subheadline)
                     .lineLimit(1)
@@ -687,7 +687,7 @@ private struct EditorFileRow: View {
             .padding(.horizontal, 8)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? .thinMaterial : .clear)
+                    .fill(.thinMaterial).opacity(isSelected ? 1 : 0)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
@@ -695,25 +695,5 @@ private struct EditorFileRow: View {
             )
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - HSplitView 封装
-private struct HSplitView<Left: View, Right: View>: View {
-    let left: Left
-    let right: Right
-    
-    init(@ViewBuilder content: () -> TupleView<(Left, Right)>) {
-        let tuple = content()
-        self.left = tuple.value.0
-        self.right = tuple.value.1
-    }
-    
-    var body: some View {
-        HStack(spacing: 0) {
-            left
-            Divider()
-            right
-        }
     }
 }

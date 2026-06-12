@@ -202,7 +202,7 @@ struct DexViewerView: View {
             toolbarView
 
             // 主内容
-            HSplitView {
+            GlassSplitView {
                 // 类结构树
                 classTreeView
                     .frame(minWidth: 280)
@@ -499,7 +499,7 @@ struct DexViewerView: View {
                 .foregroundColor(.secondary)
             Text("支持按包名分组浏览类结构")
                 .font(.caption)
-                .foregroundColor(.tertiary)
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
