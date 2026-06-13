@@ -468,17 +468,17 @@ final class APKParserService {
     private func parseManifestInfo(xml: String, into info: inout ManifestInfo) {
         // package
         if let r = xml.range(of: #"package="([^"]*)""#, options: .regularExpression) {
-            var v = String(xml[r]).replacingOccurrences(of: "package=\"", with: "").replacingOccurrences(of: "\"", with: "")
+            let v = String(xml[r]).replacingOccurrences(of: "package=\"", with: "").replacingOccurrences(of: "\"", with: "")
             info.packageName = v
         }
         // versionName
         if let r = xml.range(of: #"versionName="([^"]*)""#, options: .regularExpression) {
-            var v = String(xml[r]).replacingOccurrences(of: "versionName=\"", with: "").replacingOccurrences(of: "\"", with: "")
+            let v = String(xml[r]).replacingOccurrences(of: "versionName=\"", with: "").replacingOccurrences(of: "\"", with: "")
             info.versionName = v
         }
         // versionCode
         if let r = xml.range(of: #"versionCode="([^"]*)""#, options: .regularExpression) {
-            var v = String(xml[r]).replacingOccurrences(of: "versionCode=\"", with: "").replacingOccurrences(of: "\"", with: "")
+            let v = String(xml[r]).replacingOccurrences(of: "versionCode=\"", with: "").replacingOccurrences(of: "\"", with: "")
             info.versionCode = v
         }
         // minSdkVersion
@@ -580,15 +580,17 @@ final class APKParserService {
         ]
         let xml = manifest.rawXML
         for (tag, type) in typeMap {
-            let pattern = "\(tag)[^>]*android:name=\"([^\"]+)\""
-            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
-                let nsRange = NSRange(xml.startIndex..<xml.endIndex, in: xml)
-                regex.enumerateMatches(in: xml, options: [], range: nsRange) { match, _, _ in
-                    if let m = match, let r = Range(m.range(at: 1), in: xml) {
-                        let name = String(xml[r])
-                        let exported = xml.contains("android:exported=\"true\"")
-                        components.append(ComponentInfo(name: name, componentType: type, exported: exported))
-                    }
+            guard let regex = try? NSRegularExpression(pattern: "\(tag)[^>]*?>", options: [.dotMatchesLine]) else { continue }
+            let nsRange = NSRange(xml.startIndex..<xml.endIndex, in: xml)
+            let matches = regex.matches(in: xml, options: [], range: nsRange)
+            for match in matches {
+                let tagNSRange = match.range
+                guard let tagRange = Range(tagNSRange, in: xml) else { continue }
+                let tagContent = String(xml[tagRange])
+                if let nameMatch = tagContent.range(of: #"android:name="([^"]+)""#, options: .regularExpression) {
+                    let name = String(tagContent[nameMatch]).replacingOccurrences(of: "android:name=\"", with: "").replacingOccurrences(of: "\"", with: "")
+                    let exported = tagContent.contains("android:exported=\"true\"")
+                    components.append(ComponentInfo(name: name, componentType: type, exported: exported))
                 }
             }
         }

@@ -321,7 +321,7 @@ struct DexViewerView: View {
     private func loadDexDetails(_ filePath: String) {
         isDetailLoading = true
         // 从 DEX 文件魔法字中提取信息
-        if let url = URL(string: "file://\(filePath)"),
+        if let url = URL(string: "file://\(filePath.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? filePath)"),
            let handle = try? FileHandle(forReadingFrom: url) {
             defer { try? handle.close() }
 

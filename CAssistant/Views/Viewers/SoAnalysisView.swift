@@ -443,7 +443,7 @@ struct SoAnalysisView: View {
     private func parseELFFile(_ filePath: String) {
         isLoading = true
 
-        guard let url = URL(string: "file://\(filePath)"),
+        guard let url = URL(string: "file://\(filePath.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? filePath)"),
               let handle = try? FileHandle(forReadingFrom: url) else {
             isLoading = false
             return

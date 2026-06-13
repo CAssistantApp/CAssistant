@@ -40,11 +40,14 @@ jobs:
 
       - name: 安装构建工具
         run: |
-          brew install xcodegen 2>/dev/null || true
-          gem install xcpretty 2>/dev/null || true
+          set -e
+          brew install xcodegen
 
       - name: 生成 Xcode 项目
-        run: xcodegen generate
+        run: |
+          set -e
+          xcodegen generate --spec project.yml
+          ls -la CAssistant.xcodeproj/project.pbxproj
 
       - name: 构建应用
         run: |

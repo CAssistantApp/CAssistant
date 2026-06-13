@@ -1,5 +1,4 @@
 import Foundation
-import UniformTypeIdentifiers
 
 // MARK: - 文件辅助工具
 enum FileHelpers {

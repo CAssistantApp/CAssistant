@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 // MARK: - AI 对话服务
 @MainActor
@@ -124,9 +125,9 @@ final class AIService: ObservableObject {
     }
 
     // MARK: - Private
-    private let fallbackURL = URL(string: "https://example.com")!
+    private let fallbackURL = URL(string: "https://api.openai.com/v1/chat/completions")!
 
-    private func apiEndpoint(for provider: AIProvider) -> URL {
+    private nonisolated func apiEndpoint(for provider: AIProvider) -> URL {
         switch provider {
         case .openAI:
             return URL(string: "https://api.openai.com/v1/chat/completions") ?? fallbackURL
@@ -139,7 +140,7 @@ final class AIService: ObservableObject {
         }
     }
 
-    private func buildRequestBody(
+    private nonisolated func buildRequestBody(
         model: String,
         messages: [ChatMessage],
         temperature: Double,
