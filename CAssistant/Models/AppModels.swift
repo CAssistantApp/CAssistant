@@ -27,8 +27,6 @@ final class AppState: ObservableObject {
     @Published var themeSettings = ThemeSettings()
     @Published var errorMessage: String?
     @Published var announcements: [CloudAnnouncement] = CloudAnnouncement.loadDefaults()
-    @Published var envConfig = EnvironmentConfig()
-    @Published var projectConfig = ProjectConfig()
 
     func loadAnnouncements() {
         announcements = CloudAnnouncement.loadDefaults()
@@ -258,7 +256,7 @@ struct AIConfig {
     var model: String = "gpt-4o"
     var temperature: Double = 0.7
     var maxTokens: Int = 4096
-    var systemPrompt: String = "你是一个专业的 Android 逆向工程助手，帮助分析 APK 文件结构、Smali 代码、SO 库等。"
+    var systemPrompt: String = "你是一个专业的应用分析助手，帮助分析应用包文件结构、代码、库文件等。"
 }
 
 enum AIProvider: String, CaseIterable, Identifiable {
@@ -387,50 +385,5 @@ struct CloudAnnouncement: Identifiable, Codable {
                 isRead: false
             )
         ]
-    }
-}
-
-// MARK: - Environment Config
-struct EnvironmentConfig {
-    var sdkPath: String = "/Library/Android/sdk"
-    var jdkPath: String = "/Library/Java/JavaVirtualMachines/jdk-17.jdk"
-    var ndkPath: String = "/Library/Android/sdk/ndk/26.1.10909125"
-    var buildToolsVersion: String = "34.0.0"
-    var platformVersion: String = "34"
-    var gradleVersion: String = "8.4"
-    var kotlinVersion: String = "1.9.22"
-    var apkToolVersion: String = "2.9.3"
-    var dex2jarVersion: String = "2.1"
-    var jadxVersion: String = "1.5.0"
-    var enableAutoUpdate: Bool = true
-    var enableAnalytics: Bool = false
-}
-
-// MARK: - Project Config
-struct ProjectConfig {
-    var projectName: String = ""
-    var packageName: String = ""
-    var targetSdkVersion: String = "34"
-    var minSdkVersion: String = "21"
-    var language: ProjectLanguage = .java
-    var architecture: ProjectArchitecture = .arm64
-    var enableObfuscation: Bool = false
-    var enableShrink: Bool = true
-    var signingConfig: String = "debug"
-    var outputDir: String = ""
-
-    enum ProjectLanguage: String, CaseIterable, Identifiable {
-        case java = "Java"
-        case kotlin = "Kotlin"
-        var id: String { rawValue }
-    }
-
-    enum ProjectArchitecture: String, CaseIterable, Identifiable {
-        case arm64 = "arm64-v8a"
-        case armeabi = "armeabi-v7a"
-        case x86 = "x86"
-        case x8664 = "x86_64"
-        case universal = "通用"
-        var id: String { rawValue }
     }
 }

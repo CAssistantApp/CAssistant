@@ -25,10 +25,11 @@ env:
 jobs:
   build:
     name: 构建 CAssistant IPA
-    runs-on: macos-latest
-    timeout-minutes: 20
-
+    runs-on: macos-14
+    timeout-minutes: 25
     steps:
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
       - name: 检出代码
         uses: actions/checkout@v4
 

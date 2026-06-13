@@ -10,7 +10,6 @@ struct ContentView: View {
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @State private var navigationPath = NavigationPath()
     @State private var showAnnouncements = false
-    @State private var showNewProject = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -94,7 +93,7 @@ struct ContentView: View {
                     .tabItem { Label("AI", systemImage: "bolt.circle.fill") }
                     .tag(AppTab.ai)
 
-                ProjectTabView(showNewProject: $showNewProject)
+                ProjectTabView()
                     .tabItem { Label("项目", systemImage: "folder.circle.fill") }
                     .tag(AppTab.project)
 
@@ -107,9 +106,6 @@ struct ContentView: View {
                 handleFileImport(result)
             }
             .navigationDestination(for: String.self) { NavigationDestinations.view(for: $0) }
-        }
-        .sheet(isPresented: $showNewProject) {
-            NewProjectView()
         }
     }
 
@@ -151,7 +147,7 @@ struct ContentView: View {
         case .analyze: ApkAnalyzerView()
         case .viewer: ApkInfoView()
         case .ai: AIAssistantView()
-        case .project: ProjectTabView(showNewProject: $showNewProject)
+        case .project: ProjectTabView()
         case .tools: ToolsTabView()
         }
     }
@@ -161,7 +157,7 @@ struct ContentView: View {
         switch selectedTab {
         case .analyze: ManifestView()
         case .viewer: PermissionAnalysisView()
-        case .ai: CertificateView()
+        case .ai: CertificateManagerView()
         case .project: ComponentAnalysisView()
         case .tools: ClassStructureView()
         }
@@ -174,7 +170,7 @@ struct NavigationDestinations {
         switch dest {
         case "manifest": ManifestView()
         case "permissions": PermissionAnalysisView()
-        case "certificate": CertificateView()
+        case "certificate": CertificateManagerView()
         case "components": ComponentAnalysisView()
         case "classStructure": ClassStructureView()
         case "fileList": FileListView()
@@ -186,16 +182,12 @@ struct NavigationDestinations {
         case "aiChat": AIChatView()
         case "aiConfig": AIConfigView()
         case "projectManager": ProjectManagerView()
-        case "reverseEngineering": ReverseEngineeringView()
-        case "terminal": TerminalView()
         case "ideEditor": IDEEditorView()
         case "certManager": CertificateManagerView()
         case "filePreview": FilePreviewView()
         case "settings": SettingsView()
         case "about": AboutView()
         case "cloudAnnouncements": CloudAnnouncementView()
-        case "envConfig": EnvironmentConfigView()
-        case "newProject": NewProjectView()
         default: Text("未知页面")
         }
     }
@@ -255,7 +247,6 @@ enum AppTab: Int, Hashable {
 // MARK: - Project Tab View (with proper navigation)
 struct ProjectTabView: View {
     @EnvironmentObject var appState: AppState
-    @Binding var showNewProject: Bool
 
     var body: some View {
         NavigationStack {
@@ -272,9 +263,6 @@ struct ProjectTabView: View {
                             Text("请先导入 APK 文件以浏览项目结构")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                            GlassButton(title: "新建项目", icon: "plus.circle.fill", color: .accentColor) {
-                                showNewProject = true
-                            }
                             Spacer()
                         }
                     } else {
@@ -304,15 +292,6 @@ struct ProjectTabView: View {
                         VStack(spacing: 8) {
                             NavigationLink(value: "projectManager") {
                                 navLabel("项目管理", "folder.badge.gearshape", "导出、清理")
-                            }
-                            NavigationLink(value: "reverseEngineering") {
-                                navLabel("逆向工程", "arrow.triangle.2.circlepath", "反编译工具")
-                            }
-                            NavigationLink(value: "terminal") {
-                                navLabel("终端", "terminal", "命令行")
-                            }
-                            NavigationLink(value: "newProject") {
-                                navLabel("新建项目", "plus.rectangle.on.folder", "创建新分析项目")
                             }
                         }
                         .padding(12)
@@ -370,9 +349,6 @@ struct ToolsTabView: View {
 
                     GlassSectionHeader(title: "配置与帮助", icon: "gearshape.fill")
                     VStack(spacing: 8) {
-                        NavigationLink(value: "envConfig") {
-                            toolLabel("环境配置", "building.2", "SDK/NDK 路径")
-                        }
                         NavigationLink(value: "settings") {
                             toolLabel("主题设置", "paintpalette", "外观与编辑器")
                         }
