@@ -12,6 +12,8 @@
 name: Build IPA
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       signing:
@@ -22,6 +24,9 @@ on:
         options:
           - unsigned
           - development
+
+env:
+  SIGNING_TYPE: ${{ github.event.inputs.signing || 'unsigned' }}
 
 jobs:
   build:
@@ -48,7 +53,7 @@ jobs:
 
       - name: 🏗️ 构建应用
         run: |
-          if [ "${{ github.event.inputs.signing }}" = "unsigned" ]; then
+          if [ "${{ env.SIGNING_TYPE }}" = "unsigned" ]; then
             echo "▶ 无签名构建（可侧载）"
             xcodebuild build \
               -project CAssistant.xcodeproj \
@@ -90,7 +95,7 @@ jobs:
       - name: 📤 上传 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: CAssistant-${{ github.event.inputs.signing }}.ipa
+          name: CAssistant-${{ env.SIGNING_TYPE }}.ipa
           path: CAssistant.ipa
           compression-level: 0
 
@@ -99,7 +104,7 @@ jobs:
           echo "=============================="
           echo "  ✅ CAssistant IPA 构建完成"
           echo "=============================="
-          echo "签名方式: ${{ github.event.inputs.signing }}"
+          echo "签名方式: ${{ env.SIGNING_TYPE }}"
           echo "IPA 大小: $(du -h CAssistant.ipa | cut -f1)"
           echo "构建时间: $(date)"
           echo "=============================="
