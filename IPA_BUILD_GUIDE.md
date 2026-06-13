@@ -25,6 +25,7 @@
 | 文件/文件夹 | 必须 |
 |------------|:---:|
 | `CAssistant/` 文件夹 | ✅ |
+| `CAssistant.xcodeproj/` 文件夹 | ✅ |
 | `project.yml` | ✅ |
 | `ExportOptions.plist` | ✅ |
 | `Package.swift` | ✅ |
@@ -146,7 +147,8 @@ CAssistant_iOS/
 │       ├── Project/          ← 项目管理
 │       ├── Tools/            ← 工具（证书/IDE）
 │       └── Settings/         ← 设置/关于
-├── project.yml               ← xcodegen 项目配置
+├── CAssistant.xcodeproj/     ← Xcode 项目（已生成，无需 xcodegen）
+├── project.yml               ← 项目配置参考文件
 ├── ExportOptions.plist        ← 导出配置
 ├── build.sh                  ← 本地打包脚本
 ├── setup.sh                  ← 初始化脚本
