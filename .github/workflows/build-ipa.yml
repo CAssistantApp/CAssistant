@@ -41,20 +41,29 @@ jobs:
       - name: 安装构建工具
         run: |
           set -e
-          gem install xcodegen
+          echo "=== Ruby 版本 ==="
+          ruby --version
+          echo "=== 安装 xcodegen ==="
+          sudo gem install xcodegen
+          echo "=== 验证安装 ==="
+          which xcodegen
+          xcodegen --version
 
       - name: 生成 Xcode 项目
         run: |
           set -e
           echo "=== 当前目录 ==="
           pwd
-          echo "=== project.yml 内容 ==="
-          cat project.yml
+          echo "=== 文件列表 ==="
+          ls -la
+          echo "=== project.yml 前20行 ==="
+          head -20 project.yml
           echo "=== 运行 xcodegen ==="
-          xcodegen generate
-          echo "=== 检查生成的项目 ==="
-          ls -la CAssistant.xcodeproj/
-          ls -la CAssistant.xcodeproj/project.pbxproj
+          xcodegen generate 2>&1; XC_RESULT=$?
+          echo "=== xcodegen 退出码: $XC_RESULT ==="
+          echo "=== 检查生成结果 ==="
+          ls -la
+          ls -la CAssistant.xcodeproj/ 2>&1 || echo "ERROR: CAssistant.xcodeproj 不存在!"
 
       - name: 构建应用
         run: |
