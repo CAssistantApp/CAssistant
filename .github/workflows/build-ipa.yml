@@ -84,8 +84,8 @@ jobs:
           echo "✅ 找到 .app: $APP_PATH"
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
-          zip -r CAssistant.ipa Payload/
-          echo "✅ IPA 打包完成"
+          zip -0 -r CAssistant.ipa Payload/
+          echo "✅ IPA 打包完成（无压缩 zip -0）"
 
       - name: 📤 上传 IPA
         uses: actions/upload-artifact@v4
