@@ -250,7 +250,7 @@ final class APKParserService {
             // 解压失败，尝试 raw deflate（无 zlib 头部）
             sourceOffset = 0
             let rawSource = data
-            let rawResult = Data(count: bufferSize)
+            var rawResult = Data(count: bufferSize)
             let rawDecoded = rawResult.withUnsafeMutableBytes { dstPtr -> Int in
                 guard let dstBase = dstPtr.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return 0 }
                 return rawSource.withUnsafeBytes { srcPtr -> Int in
@@ -502,7 +502,7 @@ final class APKParserService {
         if let r = xml.range(of: #"android:name[^"]*"([^"]*)""#, options: .regularExpression),
            let appR = xml.range(of: "<application") {
             let val = String(xml[r])
-            if String(xml[appR..<r.lowerBound]).range(of: "<activity") == nil {
+            if String(xml[appR.lowerBound..<r.lowerBound]).range(of: "<activity") == nil {
                 info.applicationName = val.replacingOccurrences(of: "android:name=\"", with: "").replacingOccurrences(of: "\"", with: "")
             }
         }

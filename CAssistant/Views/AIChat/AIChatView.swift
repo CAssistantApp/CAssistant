@@ -292,7 +292,7 @@ struct AIChatView: View {
         let hasApk = !appState.apkInfo.packageName.isEmpty
 
         if !hasApk {
-            return "当前还没有加载 APK 文件。请先在"分析"页面导入一个 APK 文件（点击"选择文件"按钮），加载完成后我就可以帮你进行详细分析了。"
+            return "当前还没有加载 APK 文件。请先在「分析」页面导入一个 APK 文件（点击「选择文件」按钮），加载完成后我就可以帮你进行详细分析了。"
         }
 
         // APK 基本信息
@@ -309,7 +309,7 @@ struct AIChatView: View {
             - DEX 文件: \(info.dexCount) 个
             - 方法数: \(info.methodCount)
             - 字符串数: \(info.stringCount)
-            - 文件大小: \(FileHelpers.formatByteSize(info.fileSize))
+            - 文件大小: \(FileHelpers.fileSizeString(info.fileSize))
 
             共解析出 \(appState.files.count) 个文件，\(appState.classes.count) 个类。
             """
@@ -346,7 +346,7 @@ struct AIChatView: View {
                 - 签名算法: \(cert.signatureAlgorithm)
                 - 公钥算法: \(cert.publicKeyAlgorithm)
                 - 序列号: `\(cert.serialNumber)`
-                - 有效期: \(cert.validFrom, style: .date) → \(cert.validTo, style: .date)
+                - 有效期: \(FileHelpers.formatDate(cert.validFrom)) → \(FileHelpers.formatDate(cert.validTo))
                 - 状态: \(cert.isValid ? "✅ 有效" : "❌ 已过期")
 
                 **数字指纹**
