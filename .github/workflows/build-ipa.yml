@@ -78,6 +78,18 @@ jobs:
           fi
 
           echo "Build exit code: $BUILD_RESULT"
+
+          if [ $BUILD_RESULT -ne 0 ]; then
+            echo ""
+            echo "=== 编译错误摘要 ==="
+            grep -E "error:|❌|fatal error" build.log | head -30 | while read -r line; do
+              echo "::error::${line}"
+            done
+            echo ""
+            echo "=== 最后30行输出 ==="
+            tail -30 build.log
+          fi
+
           exit $BUILD_RESULT
 
       - name: 上传构建日志
