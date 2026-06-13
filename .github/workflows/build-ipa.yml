@@ -1,21 +1,16 @@
 # ===================================================
 # CAssistant iOS/iPadOS IPA 云端构建工作流
-# 无需 Mac 电脑，在 GitHub 免费构建 IPA
-# ===================================================
-# 使用方法:
-# 1. 在 GitHub 上创建仓库，上传本目录所有文件
-# 2. 进入 Actions -> Build IPA -> Run workflow
-# 3. 等待约 10 分钟，下载生成的 IPA 文件
-# 4. 用 AltStore/SideStore/Sideloadly 安装到 iPhone
 # ===================================================
 
 name: Build IPA
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       signing:
-        description: '签名方式 (unsigned=可侧载, development=开发者签名)'
+        description: '签名方式'
         required: true
         default: 'unsigned'
         type: choice
@@ -23,10 +18,14 @@ on:
           - unsigned
           - development
 
+env:
+  SIGNING_MODE: ${{ github.event.inputs.signing || 'unsigned' }}
+
 jobs:
   build:
     name: 构建 CAssistant IPA
     runs-on: macos-latest
+    timeout-minutes: 20
     
     steps:
       - name: 📥 检出代码
@@ -43,12 +42,13 @@ jobs:
           gem install xcpretty
 
       - name: 🏗️ 生成 Xcode 项目
-        run: |
-          xcodegen generate
+        run: xcodegen generate
 
       - name: 🏗️ 构建应用
         run: |
-          if [ "${{ github.event.inputs.signing }}" = "unsigned" ]; then
+          SIGNING="${{ env.SIGNING_MODE }}"
+          echo "▶ 签名模式: $SIGNING"
+          if [ "$SIGNING" = "unsigned" ]; then
             echo "▶ 无签名构建（可侧载）"
             xcodebuild build \
               -project CAssistant.xcodeproj \
@@ -61,7 +61,7 @@ jobs:
               CODE_SIGN_IDENTITY="" \
               CODE_SIGN_ENTITLEMENTS="" \
               DEVELOPMENT_TEAM="" \
-              OTHER_SWIFT_FLAGS="\$(inherited) -swift-version 5" | xcpretty && exit ${PIPESTATUS[0]}
+              OTHER_SWIFT_FLAGS="$(inherited) -swift-version 5" 2>&1 | xcpretty && exit ${PIPESTATUS[0]}
           else
             echo "▶ 开发者签名构建"
             xcodebuild build \
@@ -69,28 +69,28 @@ jobs:
               -scheme CAssistant \
               -configuration Release \
               -sdk iphoneos \
-              -derivedDataPath DerivedData | xcpretty && exit ${PIPESTATUS[0]}
+              -derivedDataPath DerivedData 2>&1 | xcpretty && exit ${PIPESTATUS[0]}
           fi
 
       - name: 📦 打包为 IPA
         run: |
           APP_PATH="DerivedData/Build/Products/Release-iphoneos/CAssistant.app"
           if [ ! -d "$APP_PATH" ]; then
-            echo "❌ 未找到 .app 文件，构建可能失败"
-            ls -la DerivedData/Build/Products/Release-iphoneos/ 2>/dev/null || echo "目录不存在"
+            echo "❌ 未找到 .app"
+            ls -la DerivedData/Build/Products/Release-iphoneos/ 2>/dev/null || true
             exit 1
           fi
-          
           echo "✅ 找到 .app: $APP_PATH"
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
           zip -0 -r CAssistant.ipa Payload/
-          echo "✅ IPA 打包完成（无压缩 zip -0）"
+          echo "✅ IPA 打包完成 (zip -0 零压缩)"
+          ls -lh CAssistant.ipa
 
       - name: 📤 上传 IPA
         uses: actions/upload-artifact@v4
         with:
-          name: CAssistant-${{ github.event.inputs.signing }}.ipa
+          name: CAssistant-${{ env.SIGNING_MODE }}.ipa
           path: CAssistant.ipa
           compression-level: 0
 
@@ -99,12 +99,6 @@ jobs:
           echo "=============================="
           echo "  ✅ CAssistant IPA 构建完成"
           echo "=============================="
-          echo "签名方式: ${{ github.event.inputs.signing }}"
+          echo "签名方式: ${{ env.SIGNING_MODE }}"
           echo "IPA 大小: $(du -h CAssistant.ipa | cut -f1)"
-          echo "构建时间: $(date)"
-          echo "=============================="
-          echo "下载 IPA 后，使用以下工具安装:"
-          echo "  • AltStore (推荐)"
-          echo "  • SideStore"
-          echo "  • Sideloadly"
           echo "=============================="
