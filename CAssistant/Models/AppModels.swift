@@ -213,7 +213,7 @@ enum ComponentType: String, CaseIterable, Identifiable {
 }
 
 // MARK: - File Entry
-struct FileEntry: Identifiable {
+final class FileEntry: Identifiable, ObservableObject {
     let id = UUID()
     var name: String = ""
     var path: String = ""
@@ -222,6 +222,18 @@ struct FileEntry: Identifiable {
     var children: [FileEntry] = []
     var compressionMethod: String = ""
     var crc32: String = ""
+
+    init(name: String = "", path: String = "", size: Int64 = 0,
+         isDirectory: Bool = false, children: [FileEntry] = [],
+         compressionMethod: String = "", crc32: String = "") {
+        self.name = name
+        self.path = path
+        self.size = size
+        self.isDirectory = isDirectory
+        self.children = children
+        self.compressionMethod = compressionMethod
+        self.crc32 = crc32
+    }
 }
 
 // MARK: - Chat

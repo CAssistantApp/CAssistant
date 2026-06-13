@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ApkAnalyzerView: View {
     @EnvironmentObject var appState: AppState
+    @State private var showFilePicker = false
 
     var body: some View {
         ScrollView {
@@ -34,6 +35,16 @@ struct ApkAnalyzerView: View {
             .padding()
         }
         .navigationTitle("分析")
+        .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.data, .zip]) { result in
+            switch result {
+            case .success(let url):
+                guard url.startAccessingSecurityScopedResource() else { return }
+                defer { url.stopAccessingSecurityScopedResource() }
+                Task { await appState.parseAPK(url) }
+            case .failure(let error):
+                appState.errorMessage = error.localizedDescription
+            }
+        }
     }
 
     // MARK: - APK Info Card
@@ -160,7 +171,7 @@ struct ApkAnalyzerView: View {
                 .multilineTextAlignment(.center)
 
             GlassButton(title: "选择文件", icon: "doc.badge.plus", color: .accentColor) {
-                // 触发文件导入由父视图处理
+                showFilePicker = true
             }
 
             Spacer()

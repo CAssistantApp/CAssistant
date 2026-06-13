@@ -126,42 +126,6 @@
       "filename" : "Icon-20.png"
     },
     {
-      "idiom" : "mac",
-      "platform" : "ios",
-      "size" : "128x128",
-      "scale" : "2x"
-    },
-    {
-      "idiom" : "mac",
-      "platform" : "ios",
-      "size" : "128x128",
-      "scale" : "1x"
-    },
-    {
-      "idiom" : "mac",
-      "platform" : "ios",
-      "size" : "32x32",
-      "scale" : "2x"
-    },
-    {
-      "idiom" : "mac",
-      "platform" : "ios",
-      "size" : "32x32",
-      "scale" : "1x"
-    },
-    {
-      "idiom" : "mac",
-      "platform" : "ios",
-      "size" : "16x16",
-      "scale" : "2x"
-    },
-    {
-      "idiom" : "mac",
-      "platform" : "ios",
-      "size" : "16x16",
-      "scale" : "1x"
-    },
-    {
       "idiom" : "ios-marketing",
       "platform" : "ios",
       "size" : "1024x1024",

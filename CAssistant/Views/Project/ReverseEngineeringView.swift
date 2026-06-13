@@ -34,55 +34,58 @@ struct ReverseEngineeringView: View {
 
             GlassCard {
                 VStack(spacing: 4) {
-                    GlassNavRow(
-                        title: "DEX 转 Jar",
-                        icon: "arrow.triangle.swap",
-                        subtitle: "使用 dex2jar 将 DEX 转为 JAR 文件"
-                    ) {
-                        // Navigate
+                    NavigationLink(value: "dexViewer") {
+                        GlassNavRow(
+                            title: "DEX 转 Jar",
+                            icon: "arrow.triangle.swap",
+                            subtitle: "使用 dex2jar 将 DEX 转为 JAR 文件"
+                        ) {}
                     }
+                    .buttonStyle(.plain)
 
-                    GlassNavRow(
-                        title: "Smali 编辑",
-                        icon: "chevron.left.forwardslash.chevron.right",
-                        subtitle: "查看和编辑 Smali 代码"
-                    ) {
-                        // Navigate
+                    NavigationLink(value: "smaliViewer") {
+                        GlassNavRow(
+                            title: "Smali 编辑",
+                            icon: "chevron.left.forwardslash.chevron.right",
+                            subtitle: "查看和编辑 Smali 代码"
+                        ) {}
                     }
+                    .buttonStyle(.plain)
 
-                    GlassNavRow(
-                        title: "SO 库分析",
-                        icon: "square.stack.3d.up",
-                        subtitle: "分析 Native 库的符号和依赖"
-                    ) {
-                        // Navigate
+                    NavigationLink(value: "soAnalysis") {
+                        GlassNavRow(
+                            title: "SO 库分析",
+                            icon: "square.stack.3d.up",
+                            subtitle: "分析 Native 库的符号和依赖"
+                        ) {}
                     }
+                    .buttonStyle(.plain)
 
                     GlassNavRow(
                         title: "字符串搜索",
                         icon: "magnifyingglass.circle.fill",
                         subtitle: "在所有文件中搜索字符串"
                     ) {
-                        withAnimation {
-                            showSearchResults = true
-                        }
+                        withAnimation { showSearchResults = true }
                     }
 
-                    GlassNavRow(
-                        title: "方法交叉引用",
-                        icon: "arrow.triangle.branch",
-                        subtitle: "查找方法的调用者和被调用者"
-                    ) {
-                        // Navigate
+                    NavigationLink(value: "classStructure") {
+                        GlassNavRow(
+                            title: "方法交叉引用",
+                            icon: "arrow.triangle.branch",
+                            subtitle: "查找方法的调用者和被调用者"
+                        ) {}
                     }
+                    .buttonStyle(.plain)
 
-                    GlassNavRow(
-                        title: "资源提取",
-                        icon: "photo.on.rectangle.angled",
-                        subtitle: "提取 APK 中的图片和资源文件"
-                    ) {
-                        // Navigate
+                    NavigationLink(value: "arscViewer") {
+                        GlassNavRow(
+                            title: "资源提取",
+                            icon: "photo.on.rectangle.angled",
+                            subtitle: "提取 APK 中的图片和资源文件"
+                        ) {}
                     }
+                    .buttonStyle(.plain)
                 }
                 .padding(.vertical, 4)
             }
