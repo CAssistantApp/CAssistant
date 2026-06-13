@@ -395,6 +395,7 @@
 				6257ACD50E1C4BB3A7776CD4,
 			);
 			name = "Resources";
+			path = "Resources";
 			sourceTree = "<group>";
 		};
 
@@ -404,6 +405,7 @@
 				7DCFDE8830F64770813DCC9A,
 			);
 			name = "Models";
+			path = "Models";
 			sourceTree = "<group>";
 		};
 
@@ -414,6 +416,7 @@
 				7B397EBC756447EF812142A6,
 			);
 			name = "Services";
+			path = "Services";
 			sourceTree = "<group>";
 		};
 
@@ -424,6 +427,7 @@
 				4ACDC3712B374A298B6DE2DF,
 			);
 			name = "Utils";
+			path = "Utils";
 			sourceTree = "<group>";
 		};
 
@@ -434,6 +438,7 @@
 				41E3DE971C244A4689B57E5C,
 			);
 			name = "AIChat";
+			path = "AIChat";
 			sourceTree = "<group>";
 		};
 
@@ -443,6 +448,7 @@
 				A0331D92E9FC43E2A9E4519C,
 			);
 			name = "Project";
+			path = "Project";
 			sourceTree = "<group>";
 		};
 
@@ -453,6 +459,7 @@
 				27B5884DB06D49A295822BBF,
 			);
 			name = "Settings";
+			path = "Settings";
 			sourceTree = "<group>";
 		};
 
@@ -464,6 +471,7 @@
 				97B2FFFFBD4843D099064018,
 			);
 			name = "Tools";
+			path = "Tools";
 			sourceTree = "<group>";
 		};
 
@@ -476,6 +484,7 @@
 				A7FDFAB6828C4D21A11CCB52,
 			);
 			name = "Viewers";
+			path = "Viewers";
 			sourceTree = "<group>";
 		};
 
@@ -498,6 +507,7 @@
 				515F2B05E2D44ECC87E5DAF2,
 			);
 			name = "Views";
+			path = "Views";
 			sourceTree = "<group>";
 		};
 
@@ -514,6 +524,7 @@
 				F79529A780B941C6B77D8DAD,
 			);
 			name = "CAssistant";
+			path = "CAssistant";
 			sourceTree = "<group>";
 		};
 
