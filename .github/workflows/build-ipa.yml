@@ -62,7 +62,9 @@ jobs:
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGN_ENTITLEMENTS="" \
-              DEVELOPMENT_TEAM=""
+              DEVELOPMENT_TEAM="" \
+              2>&1 | tee build.log
+            BUILD_RESULT=${PIPESTATUS[0]}
           else
             echo "开发者签名构建"
             xcodebuild build \
@@ -70,8 +72,20 @@ jobs:
               -scheme CAssistant \
               -configuration Release \
               -sdk iphoneos \
-              -derivedDataPath DerivedData
+              -derivedDataPath DerivedData \
+              2>&1 | tee build.log
+            BUILD_RESULT=${PIPESTATUS[0]}
           fi
+
+          echo "Build exit code: $BUILD_RESULT"
+          exit $BUILD_RESULT
+
+      - name: 上传构建日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
 
       - name: 打包为 IPA
         run: |
