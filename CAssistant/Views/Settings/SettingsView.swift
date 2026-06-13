@@ -107,7 +107,7 @@ struct SettingsView: View {
             }
             .padding(.horizontal, 16)
             Slider(value: $localTheme.fontSize, in: 12...20, step: 1)
-                .onChange(of: localTheme.fontSize) { _, newValue in
+                .onChange(of: localTheme.fontSize) { _ in
                     appState.themeSettings.fontSize = localTheme.fontSize
                 }
                 .padding(.horizontal, 16)
@@ -120,7 +120,7 @@ struct SettingsView: View {
             Text("显示行号").font(.system(size: 14)).foregroundStyle(.secondary)
             Spacer()
             Toggle("", isOn: $localTheme.showLineNumbers).labelsHidden()
-                .onChange(of: localTheme.showLineNumbers) { _, newValue in
+                .onChange(of: localTheme.showLineNumbers) { _ in
                     appState.themeSettings.showLineNumbers = localTheme.showLineNumbers
                 }
         }
@@ -133,7 +133,7 @@ struct SettingsView: View {
             Text("自动缩进").font(.system(size: 14)).foregroundStyle(.secondary)
             Spacer()
             Toggle("", isOn: $localTheme.autoIndent).labelsHidden()
-                .onChange(of: localTheme.autoIndent) { _, newValue in
+                .onChange(of: localTheme.autoIndent) { _ in
                     appState.themeSettings.autoIndent = localTheme.autoIndent
                 }
         }

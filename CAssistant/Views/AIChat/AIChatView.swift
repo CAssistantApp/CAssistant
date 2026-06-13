@@ -84,10 +84,10 @@ struct AIChatView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
             }
-            .onChange(of: appState.aiChatMessages.count) { _, newValue in
+            .onChange(of: appState.aiChatMessages.count) { _ in
                 scrollToBottom(proxy: proxy)
             }
-            .onChange(of: isSending) { _, newValue in
+            .onChange(of: isSending) { _ in
                 if !isSending {
                     scrollToBottom(proxy: proxy)
                 }

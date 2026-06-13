@@ -128,14 +128,14 @@ struct AIConfigView: View {
                         TextField("输入 API Key", text: $localConfig.apiKey)
                             .font(.system(size: 14, design: .monospaced))
                             .textFieldStyle(.plain)
-                            .onChange(of: localConfig.apiKey) { _, newValue in
+                            .onChange(of: localConfig.apiKey) { _ in
                                 hasChanges = true
                             }
                     } else {
                         SecureField("输入 API Key", text: $localConfig.apiKey)
                             .font(.system(size: 14, design: .monospaced))
                             .textFieldStyle(.plain)
-                            .onChange(of: localConfig.apiKey) { _, newValue in
+                            .onChange(of: localConfig.apiKey) { _ in
                                 hasChanges = true
                             }
                     }
@@ -226,7 +226,7 @@ struct AIConfigView: View {
                     Slider(value: $localConfig.temperature, in: 0...2, step: 0.1) {
                         Text("温度")
                     }
-                    .onChange(of: localConfig.temperature) { _, newValue in
+                    .onChange(of: localConfig.temperature) { _ in
                         hasChanges = true
                     }
                     .padding(.horizontal, 16)
@@ -258,13 +258,13 @@ struct AIConfigView: View {
                     TextField("Token 数量", value: $localConfig.maxTokens, format: .number)
                         .font(.system(size: 14))
                         .textFieldStyle(.plain)
-                        .onChange(of: localConfig.maxTokens) { _, newValue in
+                        .onChange(of: localConfig.maxTokens) { _ in
                             hasChanges = true
                         }
 
                     Stepper("", value: $localConfig.maxTokens, in: 256...32768, step: 256)
                         .labelsHidden()
-                        .onChange(of: localConfig.maxTokens) { _, newValue in
+                        .onChange(of: localConfig.maxTokens) { _ in
                             hasChanges = true
                         }
                 }
@@ -301,7 +301,7 @@ struct AIConfigView: View {
                         RoundedRectangle(cornerRadius: 10)
                             .fill(.thinMaterial)
                     )
-                    .onChange(of: localConfig.systemPrompt) { _, newValue in
+                    .onChange(of: localConfig.systemPrompt) { _ in
                         hasChanges = true
                     }
                     .padding(.horizontal, 16)

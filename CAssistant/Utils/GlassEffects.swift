@@ -308,7 +308,7 @@ struct GlassCodeEditor: View {
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
                     .frame(minHeight: CGFloat(lineCount) * 20 + 24)
-                    .onChange(of: text) { _, newValue in
+                    .onChange(of: text) { _ in
                         lineCount = text.components(separatedBy: "\n").count
                     }
             }

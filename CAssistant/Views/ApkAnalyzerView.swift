@@ -139,7 +139,7 @@ struct ApkAnalyzerView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(.white.opacity(0.08), lineWidth: 0.5)
                 )
-                .onChange(of: appState.analysisLog.count) { _, newValue in
+                .onChange(of: appState.analysisLog.count) { _ in
                     if let last = appState.analysisLog.indices.last {
                         withAnimation {
                             proxy.scrollTo(last, anchor: .bottom)
