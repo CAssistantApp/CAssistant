@@ -41,16 +41,28 @@ jobs:
       - name: 安装构建工具
         run: |
           set -e
-          brew install xcodegen
+          gem install xcodegen
 
       - name: 生成 Xcode 项目
         run: |
           set -e
-          xcodegen generate --spec project.yml
+          echo "=== 当前目录 ==="
+          pwd
+          echo "=== project.yml 内容 ==="
+          cat project.yml
+          echo "=== 运行 xcodegen ==="
+          xcodegen generate
+          echo "=== 检查生成的项目 ==="
+          ls -la CAssistant.xcodeproj/
           ls -la CAssistant.xcodeproj/project.pbxproj
 
       - name: 构建应用
         run: |
+          set -e
+          echo "=== 当前目录 ==="
+          pwd
+          echo "=== 项目文件列表 ==="
+          ls -la CAssistant.xcodeproj/
           SIGNING="${{ env.SIGNING_MODE }}"
           echo "签名模式: $SIGNING"
 
