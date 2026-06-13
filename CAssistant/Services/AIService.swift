@@ -1,6 +1,7 @@
 import Foundation
 
 // MARK: - AI 对话服务
+@MainActor
 final class AIService: ObservableObject {
     @Published var isStreaming = false
 
@@ -123,16 +124,18 @@ final class AIService: ObservableObject {
     }
 
     // MARK: - Private
+    private let fallbackURL = URL(string: "https://example.com")!
+
     private func apiEndpoint(for provider: AIProvider) -> URL {
         switch provider {
         case .openAI:
-            return URL(string: "https://api.openai.com/v1/chat/completions")!
+            return URL(string: "https://api.openai.com/v1/chat/completions") ?? fallbackURL
         case .claude:
-            return URL(string: "https://api.anthropic.com/v1/messages")!
+            return URL(string: "https://api.anthropic.com/v1/messages") ?? fallbackURL
         case .gemini:
-            return URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent")!
+            return URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent") ?? fallbackURL
         case .custom:
-            return URL(string: "https://api.openai.com/v1/chat/completions")!
+            return URL(string: "https://api.openai.com/v1/chat/completions") ?? fallbackURL
         }
     }
 

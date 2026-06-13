@@ -70,7 +70,7 @@ struct TerminalView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
             }
-            .onChange(of: terminalOutput.count) { _ in
+            .onChange(of: terminalOutput.count) { _, newValue in
                 withAnimation {
                     proxy.scrollTo("bottom", anchor: .bottom)
                 }

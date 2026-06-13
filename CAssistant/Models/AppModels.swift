@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 import Foundation
 
 // MARK: - AppState
+@MainActor
 final class AppState: ObservableObject {
     @Published var selectedFileURL: URL?
     @Published var selectedFileName: String = ""

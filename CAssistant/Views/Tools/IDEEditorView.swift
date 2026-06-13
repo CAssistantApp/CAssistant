@@ -73,7 +73,7 @@ struct IDEEditorView: View {
                 syntaxHighlightedPreview
             } else {
                 GlassCodeEditor(text: $codeContent, language: detectedLanguage)
-                    .onChange(of: codeContent) { _ in
+                    .onChange(of: codeContent) { _, newValue in
                         updateCursorPosition()
                     }
             }
