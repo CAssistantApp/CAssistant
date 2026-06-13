@@ -50,8 +50,6 @@ jobs:
           SIGNING="${{ env.SIGNING_MODE }}"
           echo "签名模式: $SIGNING"
 
-          set -o pipefail
-
           if [ "$SIGNING" = "unsigned" ]; then
             echo "无签名构建（可侧载）"
             xcodebuild build \
@@ -64,8 +62,7 @@ jobs:
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGN_ENTITLEMENTS="" \
-              DEVELOPMENT_TEAM="" \
-              | xcpretty
+              DEVELOPMENT_TEAM=""
           else
             echo "开发者签名构建"
             xcodebuild build \
@@ -73,8 +70,7 @@ jobs:
               -scheme CAssistant \
               -configuration Release \
               -sdk iphoneos \
-              -derivedDataPath DerivedData \
-              | xcpretty
+              -derivedDataPath DerivedData
           fi
 
       - name: 打包为 IPA
