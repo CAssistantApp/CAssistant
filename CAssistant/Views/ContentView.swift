@@ -325,7 +325,7 @@ struct ProjectTabView: View {
                 .padding()
             }
             .navigationTitle("项目")
-            .navigationDestination(for: String.self) { NavigationDestinations.view(for: $0) }
+            .navigationDestination(for: String.self) { ContentView.NavigationDestinations.view(for: $0) }
         }
     }
 
@@ -387,7 +387,7 @@ struct ToolsTabView: View {
                 .padding()
             }
             .navigationTitle("工具")
-            .navigationDestination(for: String.self) { NavigationDestinations.view(for: $0) }
+            .navigationDestination(for: String.self) { ContentView.NavigationDestinations.view(for: $0) }
         }
     }
 
