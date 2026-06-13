@@ -106,9 +106,7 @@ struct ContentView: View {
             .fileImporter(isPresented: $showingFileImporter, allowedContentTypes: FileImportManager.supportedTypes, allowsMultipleSelection: false) { result in
                 handleFileImport(result)
             }
-            .navigationDestination(for: String.self) { dest in
-                destinationView(for: dest)
-            }
+            .navigationDestination(for: String.self) { NavigationDestinations.view(for: $0) }
         }
         .sheet(isPresented: $showNewProject) {
             NewProjectView()
@@ -169,9 +167,10 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Navigation Destinations
+    // MARK: - Shared Navigation Destinations
+struct NavigationDestinations {
     @ViewBuilder
-    private func destinationView(for dest: String) -> some View {
+    static func view(for dest: String) -> some View {
         switch dest {
         case "manifest": ManifestView()
         case "permissions": PermissionAnalysisView()
@@ -200,6 +199,7 @@ struct ContentView: View {
         default: Text("未知页面")
         }
     }
+}
 
     // MARK: - Toolbar
     @ToolbarContentBuilder
@@ -232,8 +232,11 @@ struct ContentView: View {
         switch result {
         case .success(let urls):
             guard let url = urls.first else { return }
-            let _ = url.startAccessingSecurityScopedResource()
-            Task { await appState.parseAPK(url) }
+            let accessing = url.startAccessingSecurityScopedResource()
+            Task {
+                await appState.parseAPK(url)
+                if accessing { url.stopAccessingSecurityScopedResource() }
+            }
         case .failure(let error):
             appState.errorMessage = error.localizedDescription
         }
@@ -322,6 +325,7 @@ struct ProjectTabView: View {
                 .padding()
             }
             .navigationTitle("项目")
+            .navigationDestination(for: String.self) { NavigationDestinations.view(for: $0) }
         }
     }
 
@@ -383,6 +387,7 @@ struct ToolsTabView: View {
                 .padding()
             }
             .navigationTitle("工具")
+            .navigationDestination(for: String.self) { NavigationDestinations.view(for: $0) }
         }
     }
 
@@ -445,7 +450,7 @@ struct AIAssistantView: View {
                         Circle()
                             .fill(msg.role == .user ? Color.accentColor : Color.green)
                             .frame(width: 8, height: 8)
-                        Text(msg.content.prefix(60).appending(msg.content.count > 60 ? "..." : ""))
+                        Text(String(msg.content.prefix(60)) + (msg.content.count > 60 ? "..." : ""))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
