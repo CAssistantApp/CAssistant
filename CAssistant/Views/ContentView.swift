@@ -8,13 +8,73 @@ struct ContentView: View {
     @State private var showingFileImporter = false
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @State private var navigationPath = NavigationPath()
+    @State private var showAnnouncements = false
+    @State private var showNewProject = false
 
     var body: some View {
-        if horizontalSizeClass == .regular {
-            iPadLayout
-        } else {
-            iPhoneLayout
+        ZStack(alignment: .top) {
+            if horizontalSizeClass == .regular {
+                iPadLayout
+            } else {
+                iPhoneLayout
+            }
+            announcementBanner
         }
+        .onAppear {
+            appState.loadAnnouncements()
+        }
+    }
+
+    // MARK: - 云端公告横幅
+    @ViewBuilder
+    private var announcementBanner: some View {
+        if let latest = appState.announcements.first(where: { !$0.isRead }) {
+            VStack(spacing: 0) {
+                Button {
+                    showAnnouncements = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: latest.level.icon)
+                            .foregroundColor(latest.level.color)
+                            .font(.caption)
+                        Text(latest.title)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        Spacer()
+                        GlassBadge(text: latest.level.rawValue, color: latest.level.color)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(.ultraThinMaterial)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(latest.level.color.opacity(0.3), lineWidth: 0.5)
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.top, fullSafeAreaTop)
+            }
+            .sheet(isPresented: $showAnnouncements) {
+                CloudAnnouncementView()
+            }
+        }
+    }
+
+    private var fullSafeAreaTop: CGFloat {
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            return window.safeAreaInsets.top + 8
+        }
+        return 54
     }
 
     // MARK: - iPhone Layout
@@ -33,11 +93,11 @@ struct ContentView: View {
                     .tabItem { Label("AI", systemImage: "bolt.circle.fill") }
                     .tag(AppTab.ai)
 
-                ProjectFilesView()
+                ProjectTabView(showNewProject: $showNewProject)
                     .tabItem { Label("项目", systemImage: "folder.circle.fill") }
                     .tag(AppTab.project)
 
-                ToolsHubView()
+                ToolsTabView()
                     .tabItem { Label("工具", systemImage: "wrench.and.screwdriver.fill") }
                     .tag(AppTab.tools)
             }
@@ -45,9 +105,12 @@ struct ContentView: View {
             .fileImporter(isPresented: $showingFileImporter, allowedContentTypes: FileImportManager.supportedTypes, allowsMultipleSelection: false) { result in
                 handleFileImport(result)
             }
-            .navigationDestination(for: String.self) { destination in
-                destinationView(for: destination)
+            .navigationDestination(for: String.self) { dest in
+                destinationView(for: dest)
             }
+        }
+        .sheet(isPresented: $showNewProject) {
+            NewProjectView()
         }
     }
 
@@ -74,8 +137,13 @@ struct ContentView: View {
             GlassNavRow(title: "AI 助手", icon: "bolt.circle.fill", subtitle: "智能分析") { selectedTab = .ai }
             GlassNavRow(title: "项目文件", icon: "folder.circle.fill", subtitle: "文件浏览") { selectedTab = .project }
             GlassNavRow(title: "工具", icon: "wrench.and.screwdriver.fill", subtitle: "实用工具") { selectedTab = .tools }
+            Divider()
+            GlassNavRow(title: "云端公告", icon: "bell.badge.fill", subtitle: "最新动态通知") { showAnnouncements = true }
         }
         .listStyle(.sidebar)
+        .sheet(isPresented: $showAnnouncements) {
+            CloudAnnouncementView()
+        }
     }
 
     @ViewBuilder
@@ -84,8 +152,8 @@ struct ContentView: View {
         case .analyze: ApkAnalyzerView()
         case .viewer: ApkInfoView()
         case .ai: AIAssistantView()
-        case .project: ProjectFilesView()
-        case .tools: ToolsHubView()
+        case .project: ProjectTabView(showNewProject: $showNewProject)
+        case .tools: ToolsTabView()
         }
     }
 
@@ -100,6 +168,7 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Navigation Destinations
     @ViewBuilder
     private func destinationView(for dest: String) -> some View {
         switch dest {
@@ -124,6 +193,9 @@ struct ContentView: View {
         case "filePreview": FilePreviewView()
         case "settings": SettingsView()
         case "about": AboutView()
+        case "cloudAnnouncements": CloudAnnouncementView()
+        case "envConfig": EnvironmentConfigView()
+        case "newProject": NewProjectView()
         default: Text("未知页面")
         }
     }
@@ -142,8 +214,15 @@ struct ContentView: View {
             }
         }
         ToolbarItem(placement: .navigationBarTrailing) {
-            GlassButton(title: "导入", icon: "doc.badge.plus", color: .accentColor) {
-                showingFileImporter = true
+            HStack(spacing: 6) {
+                Button { showAnnouncements = true } label: {
+                    Image(systemName: "bell.badge.fill")
+                        .foregroundColor(.accentColor)
+                }
+                .buttonStyle(.plain)
+                GlassButton(title: "导入", icon: "doc.badge.plus", color: .accentColor) {
+                    showingFileImporter = true
+                }
             }
         }
     }
@@ -169,7 +248,159 @@ enum AppTab: Int, Hashable {
     case tools
 }
 
-// MARK: - AI Assistant View (full implementation)
+// MARK: - Project Tab View (with proper navigation)
+struct ProjectTabView: View {
+    @EnvironmentObject var appState: AppState
+    @Binding var showNewProject: Bool
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    if appState.selectedFileName.isEmpty {
+                        VStack(spacing: 20) {
+                            Spacer().frame(height: 60)
+                            Image(systemName: "folder.circle")
+                                .font(.system(size: 64))
+                                .foregroundStyle(.tertiary)
+                            Text("项目文件管理")
+                                .font(.title2).fontWeight(.medium)
+                            Text("请先导入 APK 文件以浏览项目结构")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            GlassButton(title: "新建项目", icon: "plus.circle.fill", color: .accentColor) {
+                                showNewProject = true
+                            }
+                            Spacer()
+                        }
+                    } else {
+                        GlassSectionHeader(title: "项目资源", icon: "folder.circle.fill")
+                        VStack(spacing: 8) {
+                            NavigationLink(value: "fileList") {
+                                navLabel("文件列表", "list.bullet", "\(appState.files.count) 个文件")
+                            }
+                            NavigationLink(value: "dexViewer") {
+                                navLabel("DEX 查看器", "cube", "\(appState.dexFiles.count) 个 DEX 文件")
+                            }
+                            NavigationLink(value: "smaliViewer") {
+                                navLabel("Smali 代码", "chevron.left.forwardslash.chevron.right", "\(appState.smaliFiles.count) 个文件")
+                            }
+                            NavigationLink(value: "soAnalysis") {
+                                navLabel("SO 库分析", "square.stack.3d.up", "\(appState.soFiles.count) 个 SO 库")
+                            }
+                            NavigationLink(value: "arscViewer") {
+                                navLabel("ARSC 资源", "tablecells", "\(appState.arscFiles.count) 个资源")
+                            }
+                        }
+                        .padding(12)
+                        .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.08), lineWidth: 0.5))
+
+                        GlassSectionHeader(title: "项目管理", icon: "gearshape.2.fill")
+                        VStack(spacing: 8) {
+                            NavigationLink(value: "projectManager") {
+                                navLabel("项目管理", "folder.badge.gearshape", "导出、清理")
+                            }
+                            NavigationLink(value: "reverseEngineering") {
+                                navLabel("逆向工程", "arrow.triangle.2.circlepath", "反编译工具")
+                            }
+                            NavigationLink(value: "terminal") {
+                                navLabel("终端", "terminal", "命令行")
+                            }
+                            NavigationLink(value: "newProject") {
+                                navLabel("新建项目", "plus.rectangle.on.folder", "创建新分析项目")
+                            }
+                        }
+                        .padding(12)
+                        .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.08), lineWidth: 0.5))
+
+                        FileListView()
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("项目")
+        }
+    }
+
+    private func navLabel(_ title: String, _ icon: String, _ subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon).frame(width: 28).foregroundColor(.accentColor)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.system(size: 15, weight: .medium)).foregroundColor(.primary)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(.thinMaterial))
+    }
+}
+
+// MARK: - Tools Tab View (with proper navigation)
+struct ToolsTabView: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    GlassSectionHeader(title: "实用工具", icon: "wrench.and.screwdriver.fill")
+                    VStack(spacing: 8) {
+                        NavigationLink(value: "ideEditor") {
+                            toolLabel("IDE 编辑器", "curlybraces", "代码编辑，语法高亮")
+                        }
+                        NavigationLink(value: "certManager") {
+                            toolLabel("证书管理", "signature", "查看签名证书")
+                        }
+                        NavigationLink(value: "filePreview") {
+                            toolLabel("文件预览", "doc.text.magnifyingglass", "预览文件内容")
+                        }
+                    }
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.08), lineWidth: 0.5))
+
+                    GlassSectionHeader(title: "配置与帮助", icon: "gearshape.fill")
+                    VStack(spacing: 8) {
+                        NavigationLink(value: "envConfig") {
+                            toolLabel("环境配置", "building.2", "SDK/NDK 路径")
+                        }
+                        NavigationLink(value: "settings") {
+                            toolLabel("主题设置", "paintpalette", "外观与编辑器")
+                        }
+                        NavigationLink(value: "about") {
+                            toolLabel("关于应用", "info.circle", "版本与致谢")
+                        }
+                    }
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.08), lineWidth: 0.5))
+                }
+                .padding()
+            }
+            .navigationTitle("工具")
+        }
+    }
+
+    private func toolLabel(_ title: String, _ icon: String, _ subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon).frame(width: 28).foregroundColor(.accentColor)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.system(size: 15, weight: .medium)).foregroundColor(.primary)
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(.thinMaterial))
+    }
+}
+
+// MARK: - AI Assistant View
 struct AIAssistantView: View {
     @EnvironmentObject var appState: AppState
     @State private var showChat = false
@@ -179,20 +410,15 @@ struct AIAssistantView: View {
         ScrollView {
             VStack(spacing: 16) {
                 GlassSectionHeader(title: "AI 智能助手", icon: "bolt.circle.fill")
-
                 VStack(spacing: 12) {
-                    GlassNavRow(title: "AI 对话", icon: "message.fill", subtitle: "与 AI 进行智能对话分析") {
+                    GlassNavRow(title: "AI 对话", icon: "message.fill", subtitle: "智能对话分析") {
                         showChat = true
                     }
-                    GlassNavRow(title: "AI 配置", icon: "gearshape.2.fill", subtitle: "配置 API 密钥和模型参数") {
+                    GlassNavRow(title: "AI 配置", icon: "gearshape.2.fill", subtitle: "API 密钥和模型") {
                         showConfig = true
                     }
-                    GlassNavRow(title: "代码分析", icon: "chevron.left.forwardslash.chevron.right", subtitle: "分析 Smali/DEX 代码") {
-                        // Navigate to AI code analysis
-                    }
-                    GlassNavRow(title: "安全审计", icon: "shield.checkered", subtitle: "AI 驱动的安全漏洞检测") {
-                        // Navigate to security audit
-                    }
+                    GlassNavRow(title: "代码分析", icon: "chevron.left.forwardslash.chevron.right", subtitle: "AI 辅助分析代码") {}
+                    GlassNavRow(title: "安全审计", icon: "shield.checkered", subtitle: "AI 驱动安全检测") {}
                 }
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
@@ -224,89 +450,11 @@ struct AIAssistantView: View {
                             .lineLimit(1)
                         Spacer()
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12).padding(.vertical, 6)
                     .background(RoundedRectangle(cornerRadius: 8).fill(.thinMaterial))
                 }
             }
         }
-    }
-}
-
-// MARK: - Project Files View
-struct ProjectFilesView: View {
-    @EnvironmentObject var appState: AppState
-
-    var body: some View {
-        VStack(spacing: 0) {
-            if appState.selectedFileName.isEmpty {
-                VStack(spacing: 20) {
-                    Spacer().frame(height: 60)
-                    Image(systemName: "folder.circle").font(.system(size: 64)).foregroundStyle(.tertiary)
-                    Text("项目文件管理").font(.title2).fontWeight(.medium)
-                    Text("请先导入 APK 文件以浏览项目结构").font(.subheadline).foregroundStyle(.secondary)
-                    Spacer()
-                }
-            } else {
-                ScrollView {
-                    VStack(spacing: 16) {
-                        GlassSectionHeader(title: "项目资源", icon: "folder.circle.fill")
-                        VStack(spacing: 8) {
-                            GlassNavRow(title: "文件列表", icon: "list.bullet", subtitle: "\(appState.files.count) 个文件") {
-                                // Navigate
-                            }
-                            GlassNavRow(title: "DEX 查看器", icon: "cube", subtitle: "\(appState.dexFiles.count) 个 DEX 文件") {
-                                // Navigate
-                            }
-                            GlassNavRow(title: "Smali 代码", icon: "chevron.left.forwardslash.chevron.right", subtitle: "\(appState.smaliFiles.count) 个 Smali 文件") {
-                                // Navigate
-                            }
-                            GlassNavRow(title: "SO 库分析", icon: "square.stack.3d.up", subtitle: "\(appState.soFiles.count) 个 SO 库") {
-                                // Navigate
-                            }
-                            GlassNavRow(title: "ARSC 资源", icon: "tablecells", subtitle: "\(appState.arscFiles.count) 个资源文件") {
-                                // Navigate
-                            }
-                        }
-                        .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.08), lineWidth: 0.5))
-
-                        FileListView()
-                    }
-                    .padding()
-                }
-            }
-        }
-        .navigationTitle("项目")
-    }
-}
-
-// MARK: - Tools Hub View
-struct ToolsHubView: View {
-    @EnvironmentObject var appState: AppState
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                GlassSectionHeader(title: "实用工具", icon: "wrench.and.screwdriver.fill")
-
-                VStack(spacing: 8) {
-                    GlassNavRow(title: "IDE 编辑器", icon: "curlybraces", subtitle: "代码编辑器，支持语法高亮") {}
-                    GlassNavRow(title: "证书管理", icon: "signature", subtitle: "查看和管理签名证书") {}
-                    GlassNavRow(title: "逆向工程", icon: "arrow.triangle.2.circlepath", subtitle: "反编译和逆向分析工具") {}
-                    GlassNavRow(title: "终端", icon: "terminal", subtitle: "命令行工具") {}
-                    GlassNavRow(title: "文件预览", icon: "doc.text.magnifyingglass", subtitle: "预览文件内容") {}
-                    GlassNavRow(title: "设置", icon: "gearshape", subtitle: "应用设置和主题") {}
-                    GlassNavRow(title: "关于", icon: "info.circle", subtitle: "版本信息和帮助") {}
-                }
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(.white.opacity(0.08), lineWidth: 0.5))
-            }
-            .padding()
-        }
-        .navigationTitle("工具")
     }
 }
 

@@ -25,6 +25,13 @@ final class AppState: ObservableObject {
     @Published var aiConfig = AIConfig()
     @Published var themeSettings = ThemeSettings()
     @Published var errorMessage: String?
+    @Published var announcements: [CloudAnnouncement] = CloudAnnouncement.loadDefaults()
+    @Published var envConfig = EnvironmentConfig()
+    @Published var projectConfig = ProjectConfig()
+
+    func loadAnnouncements() {
+        announcements = CloudAnnouncement.loadDefaults()
+    }
 
     func reset() {
         apkInfo = ApkInfo()
@@ -295,4 +302,122 @@ struct FileImportManager {
         UTType(filenameExtension: "class") ?? .data,
         .zip, .xml, .plainText, .json, .data
     ]
+}
+
+// MARK: - Cloud Announcement
+struct CloudAnnouncement: Identifiable, Codable {
+    let id: String
+    var title: String
+    var content: String
+    var level: AnnouncementLevel
+    var publishDate: Date
+    var isRead: Bool
+    var url: String?
+
+    enum AnnouncementLevel: String, Codable, CaseIterable {
+        case info = "信息"
+        case warning = "警告"
+        case update = "更新"
+        case alert = "重要"
+
+        var color: Color {
+            switch self {
+            case .info: return .blue
+            case .warning: return .orange
+            case .update: return .green
+            case .alert: return .red
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .info: return "info.circle.fill"
+            case .warning: return "exclamationmark.triangle.fill"
+            case .update: return "arrow.down.circle.fill"
+            case .alert: return "bell.circle.fill"
+            }
+        }
+    }
+
+    static func loadDefaults() -> [CloudAnnouncement] {
+        [
+            CloudAnnouncement(
+                id: "v3.0-release",
+                title: "CAssistant 3.0 正式发布",
+                content: "全新 SwiftUI 架构，支持灵动玻璃效果、AI 智能分析、DEX/Smali 代码查看、SO 库分析等全功能。适配 iPhone + iPad 双平台。",
+                level: .update,
+                publishDate: Date(),
+                isRead: false
+            ),
+            CloudAnnouncement(
+                id: "sample-dex",
+                title: "内置示例 DEX 文件",
+                content: "应用已内置合法示例 DEX 和 Smali 文件，无需导入 APK 即可体验代码分析和反编译功能。",
+                level: .info,
+                publishDate: Date().addingTimeInterval(-86400),
+                isRead: false
+            ),
+            CloudAnnouncement(
+                id: "security-tip",
+                title: "安全提示",
+                content: "分析未知 APK 时请注意安全，建议在沙箱环境中运行。本工具仅用于合法的安全研究和学习目的。",
+                level: .warning,
+                publishDate: Date().addingTimeInterval(-172800),
+                isRead: false
+            ),
+            CloudAnnouncement(
+                id: "ai-feature",
+                title: "AI 分析功能已上线",
+                content: "接入多种 AI 模型（OpenAI/Claude/Gemini），支持 APK 智能分析和 Smali 代码解读。请先在设置中配置 API Key。",
+                level: .info,
+                publishDate: Date().addingTimeInterval(-259200),
+                isRead: false
+            )
+        ]
+    }
+}
+
+// MARK: - Environment Config
+struct EnvironmentConfig {
+    var sdkPath: String = "/Library/Android/sdk"
+    var jdkPath: String = "/Library/Java/JavaVirtualMachines/jdk-17.jdk"
+    var ndkPath: String = "/Library/Android/sdk/ndk/26.1.10909125"
+    var buildToolsVersion: String = "34.0.0"
+    var platformVersion: String = "34"
+    var gradleVersion: String = "8.4"
+    var kotlinVersion: String = "1.9.22"
+    var apkToolVersion: String = "2.9.3"
+    var dex2jarVersion: String = "2.1"
+    var jadxVersion: String = "1.5.0"
+    var enableAutoUpdate: Bool = true
+    var enableAnalytics: Bool = false
+}
+
+// MARK: - Project Config
+struct ProjectConfig {
+    var projectName: String = ""
+    var packageName: String = ""
+    var targetSdkVersion: String = "34"
+    var minSdkVersion: String = "21"
+    var language: ProjectLanguage = .java
+    var architecture: ProjectArchitecture = .arm64
+    var enableObfuscation: Bool = false
+    var enableShrink: Bool = true
+    var signingConfig: String = "debug"
+    var outputDir: String = ""
+
+    enum ProjectLanguage: String, CaseIterable, Identifiable {
+        case java = "Java"
+        case kotlin = "Kotlin"
+        var id: String { rawValue }
+    }
+
+    enum ProjectArchitecture: String, CaseIterable, Identifiable {
+        case arm64 = "arm64-v8a"
+        case armeabi = "armeabi-v7a"
+        case x86 = "x86"
+        case x8664 = "x86_64"
+        case universal = "通用"
+        var id: String { rawValue }
+    }
 }
