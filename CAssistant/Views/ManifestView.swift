@@ -160,7 +160,7 @@ struct ManifestView: View {
         ]
 
         for (pattern, color) in pairs {
-            if let range = line.range(of: pattern, options: [.regularExpression, .caseInsensitive]) {
+            if let range = line.range(of: pattern, options: [String.CompareOptions.regularExpression, .caseInsensitive]) {
                 let nsRange = NSRange(range, in: line)
                 if let attrRange = Range(nsRange, in: attrString) {
                     attrString[attrRange].foregroundColor = color

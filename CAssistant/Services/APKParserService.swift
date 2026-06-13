@@ -467,39 +467,39 @@ final class APKParserService {
     // MARK: - Manifest 信息提取
     private func parseManifestInfo(xml: String, into info: inout ManifestInfo) {
         // package
-        if let r = xml.range(of: #"package="([^"]*)""#, options: .regularExpression) {
+        if let r = xml.range(of: #"package="([^"]*)""#, options: String.CompareOptions.regularExpression) {
             let v = String(xml[r]).replacingOccurrences(of: "package=\"", with: "").replacingOccurrences(of: "\"", with: "")
             info.packageName = v
         }
         // versionName
-        if let r = xml.range(of: #"versionName="([^"]*)""#, options: .regularExpression) {
+        if let r = xml.range(of: #"versionName="([^"]*)""#, options: String.CompareOptions.regularExpression) {
             let v = String(xml[r]).replacingOccurrences(of: "versionName=\"", with: "").replacingOccurrences(of: "\"", with: "")
             info.versionName = v
         }
         // versionCode
-        if let r = xml.range(of: #"versionCode="([^"]*)""#, options: .regularExpression) {
+        if let r = xml.range(of: #"versionCode="([^"]*)""#, options: String.CompareOptions.regularExpression) {
             let v = String(xml[r]).replacingOccurrences(of: "versionCode=\"", with: "").replacingOccurrences(of: "\"", with: "")
             info.versionCode = v
         }
         // minSdkVersion
-        if let r = xml.range(of: #"minSdkVersion[^"]*"(\d+)""#, options: .regularExpression) {
-            if let inner = String(xml[r]).range(of: #""(\d+)""#, options: .regularExpression) {
+        if let r = xml.range(of: #"minSdkVersion[^"]*"(\d+)""#, options: String.CompareOptions.regularExpression) {
+            if let inner = String(xml[r]).range(of: #""(\d+)""#, options: String.CompareOptions.regularExpression) {
                 info.minSdk = String(String(xml[r])[inner]).replacingOccurrences(of: "\"", with: "")
             }
         }
         // targetSdkVersion
-        if let r = xml.range(of: #"targetSdkVersion[^"]*"(\d+)""#, options: .regularExpression) {
-            if let inner = String(xml[r]).range(of: #""(\d+)""#, options: .regularExpression) {
+        if let r = xml.range(of: #"targetSdkVersion[^"]*"(\d+)""#, options: String.CompareOptions.regularExpression) {
+            if let inner = String(xml[r]).range(of: #""(\d+)""#, options: String.CompareOptions.regularExpression) {
                 info.targetSdk = String(String(xml[r])[inner]).replacingOccurrences(of: "\"", with: "")
             }
         }
         // application label
-        if let r = xml.range(of: #"android:label[^"]*"([^"]*)""#, options: .regularExpression) {
+        if let r = xml.range(of: #"android:label[^"]*"([^"]*)""#, options: String.CompareOptions.regularExpression) {
             let v = String(xml[r]).replacingOccurrences(of: "android:label=\"", with: "").replacingOccurrences(of: "\"", with: "")
             if !v.hasPrefix("@") { info.applicationLabel = v }
         }
         // application name
-        if let r = xml.range(of: #"android:name[^"]*"([^"]*)""#, options: .regularExpression),
+        if let r = xml.range(of: #"android:name[^"]*"([^"]*)""#, options: String.CompareOptions.regularExpression),
            let appR = xml.range(of: "<application") {
             let val = String(xml[r])
             if String(xml[appR.lowerBound..<r.lowerBound]).range(of: "<activity") == nil {
@@ -580,14 +580,14 @@ final class APKParserService {
         ]
         let xml = manifest.rawXML
         for (tag, type) in typeMap {
-            guard let regex = try? NSRegularExpression(pattern: "\(tag)[^>]*?>", options: [.dotMatchesLine]) else { continue }
+            guard let regex = try? NSRegularExpression(pattern: "\(tag)[^>]*?>", options: [.dotMatchesLineSeparators]) else { continue }
             let nsRange = NSRange(xml.startIndex..<xml.endIndex, in: xml)
             let matches = regex.matches(in: xml, options: [], range: nsRange)
             for match in matches {
                 let tagNSRange = match.range
                 guard let tagRange = Range(tagNSRange, in: xml) else { continue }
                 let tagContent = String(xml[tagRange])
-                if let nameMatch = tagContent.range(of: #"android:name="([^"]+)""#, options: .regularExpression) {
+                if let nameMatch = tagContent.range(of: #"android:name="([^"]+)""#, options: String.CompareOptions.regularExpression) {
                     let name = String(tagContent[nameMatch]).replacingOccurrences(of: "android:name=\"", with: "").replacingOccurrences(of: "\"", with: "")
                     let exported = tagContent.contains("android:exported=\"true\"")
                     components.append(ComponentInfo(name: name, componentType: type, exported: exported))
