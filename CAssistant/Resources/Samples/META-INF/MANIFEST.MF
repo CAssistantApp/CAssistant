@@ -1,0 +1,55 @@
+Manifest-Version: 1.0
+Created-By: 1.8.0_402 (Amazon.com Inc.)
+Built-By: reversecoder
+Build-Jdk: 1.8.0_402
+
+Name: AndroidManifest.xml
+SHA-256-Digest: 7Q3b8K2mN4pL6xR9vW1yA5cD0fG3hJ5kM7oP2qS4tU=
+
+Name: res/layout/activity_main.xml
+SHA-256-Digest: a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8s9T0u1V=
+
+Name: res/layout/activity_dashboard.xml
+SHA-256-Digest: w2X3y4Z5a6B7c8D9e0F1g2H3i4J5k6L7m8N9o0P1q2R=
+
+Name: classes.dex
+SHA-256-Digest: 3s4T5u6V7w8X9y0Z1a2B3c4D5e6F7g8H9i0J1k2L3m=
+
+Name: classes2.dex
+SHA-256-Digest: 4N5o6P7q8R9s0T1u2V3w4X5y6Z7a8B9c0D1e2F3g4H=
+
+Name: classes3.dex
+SHA-256-Digest: 5i6J7k8L9m0N1o2P3q4R5s6T7u8V9w0X1y2Z3a4B5c=
+
+Name: lib/arm64-v8a/libnative-main.so
+SHA-256-Digest: 6D7e8F9g0H1i2J3k4L5m6N7o8P9q0R1s2T3u4V5w6X=
+
+Name: lib/arm64-v8a/libcrypto-native.so
+SHA-256-Digest: 7y8Z9a0B1c2D3e4F5g6H7i8J9k0L1m2N3o4P5q6R7s=
+
+Name: lib/arm64-v8a/libmedia-codec.so
+SHA-256-Digest: 8T9u0V1w2X3y4Z5a6B7c8D9e0F1g2H3i4J5k6L7m8N=
+
+Name: lib/arm64-v8a/libsqlite-jni.so
+SHA-256-Digest: 9o0P1q2R3s4T5u6V7w8X9y0Z1a2B3c4D5e6F7g8H9i=
+
+Name: lib/arm64-v8a/libgraphics-native.so
+SHA-256-Digest: 0J1k2L3m4N5o6P7q8R9s0T1u2V3w4X5y6Z7a8B9c0D=
+
+Name: lib/arm64-v8a/libnetwork-native.so
+SHA-256-Digest: 1e2F3g4H5i6J7k8L9m0N1o2P3q4R5s6T7u8V9w0X1y=
+
+Name: lib/arm64-v8a/libutils-native.so
+SHA-256-Digest: 2Z3a4B5c6D7e8F9g0H1i2J3k4L5m6N7o8P9q0R1s2T=
+
+Name: lib/arm64-v8a/libsecurity-jni.so
+SHA-256-Digest: 3u4V5w6X7y8Z9a0B1c2D3e4F5g6H7i8J9k0L1m2N3o=
+
+Name: res/drawable/ic_launcher.png
+SHA-256-Digest: 4P5q6R7s8T9u0V1w2X3y4Z5a6B7c8D9e0F1g2H3i4J=
+
+Name: res/mipmap-xxxhdpi/ic_launcher.png
+SHA-256-Digest: 5k6L7m8N9o0P1q2R3s4T5u6V7w8X9y0Z1a2B3c4D5e=
+
+Name: resources.arsc
+SHA-256-Digest: 6F7g8H9i0J1k2L3m4N5o6P7q8R9s0T1u2V3w4X5y6Z=
