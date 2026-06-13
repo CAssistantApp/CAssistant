@@ -25,11 +25,10 @@ env:
 jobs:
   build:
     name: 构建 CAssistant IPA
-    runs-on: macos-14
-    timeout-minutes: 25
+    runs-on: macos-latest
+    timeout-minutes: 20
+
     steps:
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
       - name: 检出代码
         uses: actions/checkout@v4
 
@@ -40,38 +39,14 @@ jobs:
 
       - name: 安装构建工具
         run: |
-          set -e
-          echo "=== Ruby 版本 ==="
-          ruby --version
-          echo "=== 安装 xcodegen ==="
-          sudo gem install xcodegen
-          echo "=== 验证安装 ==="
-          which xcodegen
-          xcodegen --version
+          brew install xcodegen 2>/dev/null || true
+          gem install xcpretty 2>/dev/null || true
 
       - name: 生成 Xcode 项目
-        run: |
-          set -e
-          echo "=== 当前目录 ==="
-          pwd
-          echo "=== 文件列表 ==="
-          ls -la
-          echo "=== project.yml 前20行 ==="
-          head -20 project.yml
-          echo "=== 运行 xcodegen ==="
-          xcodegen generate 2>&1; XC_RESULT=$?
-          echo "=== xcodegen 退出码: $XC_RESULT ==="
-          echo "=== 检查生成结果 ==="
-          ls -la
-          ls -la CAssistant.xcodeproj/ 2>&1 || echo "ERROR: CAssistant.xcodeproj 不存在!"
+        run: xcodegen generate
 
       - name: 构建应用
         run: |
-          set -e
-          echo "=== 当前目录 ==="
-          pwd
-          echo "=== 项目文件列表 ==="
-          ls -la CAssistant.xcodeproj/
           SIGNING="${{ env.SIGNING_MODE }}"
           echo "签名模式: $SIGNING"
 
