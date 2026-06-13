@@ -17,7 +17,9 @@ targets:
     platform: iOS
     deploymentTarget: "16.0"
     sources:
-      - CAssistant
+      - path: CAssistant
+        excludes:
+          - "Resources"
     settings:
       base:
         INFOPLIST_FILE: CAssistant/Info.plist
