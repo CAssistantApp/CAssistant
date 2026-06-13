@@ -1,5 +1,6 @@
 # ===================================================
-# CAssistant iOS/iPadOS IPA 云端构建工作流
+# CAssistant iOS/iPadOS IPA 云端构建
+# Push 触发自动构建，无签名 unsigned IPA
 # ===================================================
 
 name: Build IPA
@@ -26,30 +27,33 @@ jobs:
     name: 构建 CAssistant IPA
     runs-on: macos-latest
     timeout-minutes: 20
-    
+
     steps:
-      - name: 📥 检出代码
+      - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 🔧 检查 Xcode 版本
+      - name: 检查 Xcode 版本
         run: |
           xcodebuild -version
           swift --version
 
-      - name: 📦 安装构建工具
+      - name: 安装构建工具
         run: |
-          brew install xcodegen
-          gem install xcpretty
+          brew install xcodegen 2>/dev/null || true
+          gem install xcpretty 2>/dev/null || true
 
-      - name: 🏗️ 生成 Xcode 项目
+      - name: 生成 Xcode 项目
         run: xcodegen generate
 
-      - name: 🏗️ 构建应用
+      - name: 构建应用
         run: |
           SIGNING="${{ env.SIGNING_MODE }}"
-          echo "▶ 签名模式: $SIGNING"
+          echo "签名模式: $SIGNING"
+
+          set -o pipefail
+
           if [ "$SIGNING" = "unsigned" ]; then
-            echo "▶ 无签名构建（可侧载）"
+            echo "无签名构建（可侧载）"
             xcodebuild build \
               -project CAssistant.xcodeproj \
               -scheme CAssistant \
@@ -61,43 +65,48 @@ jobs:
               CODE_SIGN_IDENTITY="" \
               CODE_SIGN_ENTITLEMENTS="" \
               DEVELOPMENT_TEAM="" \
-              OTHER_SWIFT_FLAGS="$(inherited) -swift-version 5" 2>&1 | xcpretty && exit ${PIPESTATUS[0]}
+              | xcpretty
           else
-            echo "▶ 开发者签名构建"
+            echo "开发者签名构建"
             xcodebuild build \
               -project CAssistant.xcodeproj \
               -scheme CAssistant \
               -configuration Release \
               -sdk iphoneos \
-              -derivedDataPath DerivedData 2>&1 | xcpretty && exit ${PIPESTATUS[0]}
+              -derivedDataPath DerivedData \
+              | xcpretty
           fi
 
-      - name: 📦 打包为 IPA
+      - name: 打包为 IPA
         run: |
           APP_PATH="DerivedData/Build/Products/Release-iphoneos/CAssistant.app"
           if [ ! -d "$APP_PATH" ]; then
-            echo "❌ 未找到 .app"
-            ls -la DerivedData/Build/Products/Release-iphoneos/ 2>/dev/null || true
-            exit 1
+            echo "未找到 .app，搜索备选路径..."
+            find DerivedData -name "CAssistant.app" -type d 2>/dev/null || true
+            APP_PATH=$(find DerivedData -name "CAssistant.app" -type d 2>/dev/null | head -1)
+            if [ -z "$APP_PATH" ]; then
+              echo "错误: 未找到 .app"
+              exit 1
+            fi
           fi
-          echo "✅ 找到 .app: $APP_PATH"
+          echo "找到 .app: $APP_PATH"
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
           zip -0 -r CAssistant.ipa Payload/
-          echo "✅ IPA 打包完成 (zip -0 零压缩)"
+          echo "IPA 打包完成 (zip -0 零压缩)"
           ls -lh CAssistant.ipa
 
-      - name: 📤 上传 IPA
+      - name: 上传 IPA
         uses: actions/upload-artifact@v4
         with:
           name: CAssistant-${{ env.SIGNING_MODE }}.ipa
           path: CAssistant.ipa
           compression-level: 0
 
-      - name: 📋 构建摘要
+      - name: 构建摘要
         run: |
           echo "=============================="
-          echo "  ✅ CAssistant IPA 构建完成"
+          echo "  CAssistant IPA 构建完成"
           echo "=============================="
           echo "签名方式: ${{ env.SIGNING_MODE }}"
           echo "IPA 大小: $(du -h CAssistant.ipa | cut -f1)"

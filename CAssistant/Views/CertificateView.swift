@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct CertificateView: View {
     @EnvironmentObject var appState: AppState

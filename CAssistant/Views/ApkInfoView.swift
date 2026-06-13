@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ApkInfoView: View {
     @EnvironmentObject var appState: AppState

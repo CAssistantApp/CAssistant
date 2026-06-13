@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - File Preview View
 struct FilePreviewView: View {
